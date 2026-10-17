@@ -1,0 +1,28 @@
+# Secrets / API keys
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets*
+
+# Pulled chain data (re-create with the scripts)
+data/raw/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Foundry (phase 2)
+out/
+cache/
+broadcast/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
