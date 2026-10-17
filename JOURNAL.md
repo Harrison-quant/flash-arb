@@ -189,3 +189,27 @@ New entries go at the bottom; earlier entries aren't edited.
   scope. The study measures same-pair, two-pool arbitrage only, which is what the universe and the
   screen were designed for. So the two ARB pools are in the data but have no same-pair partner in
   the universe. Cycles through them would be a separate study with its own pre-commitments.
+
+## 2026-10-17 - Gas data: base fee at event blocks only (method, before fetching)
+
+**Why**
+- Base fee for every August block (10.65M headers) isn't feasible without paying. The public
+  endpoint is rate-limited to about 12 blocks/s (about 250 hours), and Alchemy's free tier would
+  need about 170M compute units against a 30M monthly limit. eth_feeHistory is refused for August
+  blocks by both endpoints. Harrison decided: no paid plan, and no sampling.
+
+**Method, fixed before fetching**
+- Fetch baseFeePerGas only at blocks where at least one of the 12 universe pools emitted an event
+  (any event type) in August, from the decoded logs in data/raw/aug/logs/.
+- Between those blocks, carry the last fetched value forward. A gap can only appear or close at a
+  block where a pool event happened, so every block where the screen can change has a fetched
+  value. The carried-forward value is used only for blocks where nothing in our pools changed.
+- Limitation: if the base fee spikes inside a quiet stretch, the carried-forward value misses it.
+  Arbitrum's base fee sits near its floor most of the time, so I expect this to matter little.
+  I'll report how often the fetched value changes between consecutive event blocks as a check.
+
+**Not covered: the L1 data fee**
+- On Arbitrum a transaction also pays for posting its data to Ethereum (L1). That charge depends
+  on the L1 price estimate at the time and the transaction's size, and it isn't in the block header.
+  It isn't covered here. It will be measured in phase 2 from the real contract transaction on a
+  fork. Until then any cost figure is L2 gas only and understates the true cost.

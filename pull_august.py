@@ -168,7 +168,9 @@ def archive_state(block):
         try:
             res = mc.functions.aggregate3(calls).call(block_identifier=block)
             break
-        except Exception:
+        except Exception as e:
+            msg = str(e).replace(RPC, "<rpc>")[:150]
+            print(f"  archive call at block {block} failed (attempt {attempt + 1}/8), retrying: {msg}", flush=True)
             time.sleep(2 ** attempt)
     else:
         raise RuntimeError(f"archive state call failed at block {block}")
@@ -181,27 +183,73 @@ def archive_state(block):
     return st
 
 
+CP_DIR = f"{OUT}/checkpoints"
+CP_KEYS = ["block", "pool", "sqrtp", "tick", "liquidity", "fee_zto", "fee_otz"]
+
+
+def complete(rows):
+    """A checkpoint is complete if it has exactly the 12 pools, each with all its fields."""
+    if sorted(r["pool"] for r in rows) != sorted(POOLS):
+        return False
+    need = lambda p: ["sqrtp", "tick", "liquidity"] + (["fee_zto", "fee_otz"] if DEX[p] == "CamelotV3" else [])
+    return all(str(r[k]).lstrip("-").isdigit() for r in rows for k in need(r["pool"]))
+
+
+def write_checkpoint(block, rows):
+    """Write one checkpoint file atomically: temp file first, then rename over the final name."""
+    path = f"{CP_DIR}/{block}.csv"
+    with open(path + ".tmp", "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=CP_KEYS)
+        w.writeheader()
+        w.writerows(rows)
+    os.replace(path + ".tmp", path)
+
+
+def migrate_old_checkpoints():
+    """The first run appended every checkpoint to one file and was killed mid-write. Keep its
+    complete checkpoints as per-checkpoint files and drop the partial one."""
+    old = f"{OUT}/checkpoints.csv"
+    if not os.path.exists(old):
+        return
+    by_block = {}
+    for r in load(old).to_dict("records"):
+        by_block.setdefault(int(r["block"]), []).append(r)
+    kept = 0
+    for b, rows in by_block.items():
+        if complete(rows):
+            write_checkpoint(b, rows)
+            kept += 1
+        else:
+            print(f"  dropping partial checkpoint {b} ({len(rows)}/12 pools) from the first run")
+    os.replace(old, old + ".migrated")
+    print(f"  migrated {kept} complete checkpoints from the first run")
+
+
 def checkpoint_states(cps):
-    path = f"{OUT}/checkpoints.csv"
+    os.makedirs(CP_DIR, exist_ok=True)
+    migrate_old_checkpoints()
+    for t in glob.glob(f"{CP_DIR}/*.tmp"):  # unfinished writes from a killed run
+        os.remove(t)
     have = {}
-    if os.path.exists(path):
-        for r in load(path).to_dict("records"):
-            have.setdefault(int(r["block"]), {})[r["pool"]] = {k: int(v) for k, v in r.items()
-                                                                if k not in ("block", "pool") and v != ""}
+    for path in glob.glob(f"{CP_DIR}/*.csv"):
+        rows = load(path).to_dict("records")
+        if not complete(rows):
+            print(f"  dropping incomplete checkpoint file {os.path.basename(path)}")
+            os.remove(path)
+            continue
+        have[int(os.path.basename(path)[:-4])] = {
+            r["pool"]: {k: int(v) for k, v in r.items() if k not in ("block", "pool") and v != ""}
+            for r in rows}
     new = [c for c in cps if c not in have]
-    keys = ["block", "pool", "sqrtp", "tick", "liquidity", "fee_zto", "fee_otz"]
-    with open(path, "a", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=keys)
-        if not have:
-            w.writeheader()
-        for i, c in enumerate(new):
-            st = archive_state(c)
-            have[c] = st
-            for p, v in st.items():
-                w.writerow({"block": c, "pool": p, **v})
-            if (i + 1) % 100 == 0:
-                print(f"  archive checkpoints {i + 1}/{len(new)}", flush=True)
-                f.flush()
+    print(f"  {len(cps) - len(new)} checkpoints already saved, {len(new)} to fetch", flush=True)
+    t0 = time.time()
+    for i, c in enumerate(new):
+        st = archive_state(c)
+        write_checkpoint(c, [{"block": c, "pool": p, **v} for p, v in st.items()])
+        have[c] = st
+        if (i + 1) % 25 == 0 or i + 1 == len(new):
+            left = (time.time() - t0) / (i + 1) * (len(new) - i - 1) / 60
+            print(f"  archive checkpoints {i + 1}/{len(new)}  ({left:.0f} min left)", flush=True)
     return have
 
 
@@ -270,7 +318,8 @@ def main():
                          "detail": extra})
 
     rec = pd.DataFrame(rows)
-    rec.to_csv("data/aug_reconcile.csv", index=False)
+    rec.to_csv("data/aug_reconcile.csv.tmp", index=False)
+    os.replace("data/aug_reconcile.csv.tmp", "data/aug_reconcile.csv")
 
     if replaced:
         keep = ev[[(p, (b - b0) // WINDOW) not in replaced for p, b in zip(ev.pool, ev.block)]]
@@ -278,7 +327,8 @@ def main():
         ev["block"] = ev["block"].astype(int)
         ev["log_index"] = ev["log_index"].astype(int)
     ev = ev.sort_values(["block", "log_index"])
-    ev.to_csv("data/raw/aug_events.csv.gz", index=False, compression="gzip")
+    ev.to_csv("data/raw/aug_events.csv.gz.tmp", index=False, compression="gzip")
+    os.replace("data/raw/aug_events.csv.gz.tmp", "data/raw/aug_events.csv.gz")
 
     print(f"\nEvents: {len(ev):,} total")
     print(ev.groupby("event").size().to_string())
