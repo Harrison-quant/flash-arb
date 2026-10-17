@@ -103,9 +103,9 @@ def try_call(addr, name, *args, block):
         return None
 
 
-def snapshot_block():
-    """First block with timestamp >= SNAPSHOT_UTC (binary search)."""
-    target = int(SNAPSHOT_UTC.timestamp())
+def snapshot_block(when=SNAPSHOT_UTC):
+    """First block with timestamp >= when (binary search)."""
+    target = int(when.timestamp())
     lo, hi = 0, w3.eth.block_number
     while lo < hi:
         mid = (lo + hi) // 2
