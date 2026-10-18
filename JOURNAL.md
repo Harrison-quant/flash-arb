@@ -767,3 +767,39 @@ identical line for line before and after the change. No other code changed. The 
 otherwise stands.
 
 - Variants tested: 1.
+
+## 2026-10-19 - Implementation change: base fee fetched only where the fee screen passes (September)
+
+**September data so far.** The event pull and reconciliation finished: 3,697,842 events, all 12,060
+pool-windows (12 pools x 1,005 windows) match the archive, with no tick or Camelot fee mismatches.
+The full base-fee fetch (1,244,245 event blocks) estimated 33 hours and could have exceeded the free
+Alchemy monthly allowance, so Harrison stopped it after 9 of 125 parts. No September opportunity
+data exists yet.
+
+**Change (order of work only, not the method).** The tick read and checks run first, then a screen
+pass lists the blocks where at least one pair-direction state passes the fee screen. The base fee is
+fetched only at those blocks, and then the scan and capture finish as before. Headers from the 9
+finished parts of the stopped fetch are reused where they fall on those blocks.
+
+**Why results are identical to a full fetch.** In the scan, gas enters only through net profit =
+gross - gas, and that's computed only for states that pass the screen. A state that fails the screen
+has no net profit: it can't open an opportunity, and it closes an open one, whatever gas costs. The
+Aave comparison uses gas only when an opportunity opens, which requires passing the screen. Capture
+doesn't use gas. Every evaluated state is at an event block, so the base fee is the one fetched at
+that exact block, and the carry-forward rule is never used. The screen itself uses only prices and
+fees.
+
+**Verified on August.** The screen pass gives 205,088 passing states in 96,083 distinct blocks (11% of
+the 855,735 event blocks), all inside the full gas file. I reran the August scan with the gas file
+cut down to those 96,083 blocks. The opportunity file is byte-identical to the run with the full gas
+file, and the scan counts are identical. The full August gas file was restored afterwards. Along the
+way I found that rows in the opportunity file came out in a varying order between runs, because
+Python's set iteration order changes from process to process. Values never changed. The file is now
+written sorted by opening transaction and pools. The August summary is unchanged by that, line for
+line.
+
+**Consequence for reporting.** September's base-fee statistics will describe the screened blocks
+only, not all event blocks as in August. That's a description of the gas data, not an input to any
+result.
+
+- Variants tested: 1.

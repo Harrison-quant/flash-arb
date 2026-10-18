@@ -7,7 +7,9 @@ Method (JOURNAL.md, "Gas data: base fee at event blocks only"):
 - Between those blocks the last value is carried forward when the data is used (see base_fee_at).
 - The L1 data fee is not covered; it is measured in phase 2.
 Saves in parts of 10,000 blocks to data/raw/aug/gas/ (each written to a temp file, then renamed),
-so a rerun resumes. Final file: data/raw/aug_gas.csv (block, ts, base_fee_wei).
+so a rerun resumes. Final file: data/raw/<period>_gas.csv (block, ts, base_fee_wei).
+`python fetch_gas_aug.py screened`: only the blocks in <RAW>/screen_blocks.csv (written by
+scan_august.py screen), parts in <RAW>/gas_screened/. The scan's results are identical either way.
 """
 import bisect
 import csv
@@ -55,20 +57,33 @@ def base_fee_at(gas, block):
 
 
 def main():
-    src = period.EVENTS
+    # "screened" (journal 2026-10-19): only blocks where a state passed the fee screen, the only
+    # blocks whose base fee the scan uses. Headers already fetched by a full run are reused.
+    screened = len(sys.argv) > 1 and sys.argv[1] == "screened"
+    out = f"{period.RAW}/gas_screened" if screened else OUT
+    src = f"{period.RAW}/screen_blocks.csv" if screened else period.EVENTS
     if not os.path.exists(src):
-        sys.exit(f"{src} not found: run pull_august.py to completion first")
+        sys.exit(f"{src} not found: run " + ("scan_august.py screen" if screened else "pull_august.py") + " to completion first")
     blocks = sorted(pd.read_csv(src, usecols=["block"]).block.unique().tolist())
-    parts = [blocks[i:i + PART] for i in range(0, len(blocks), PART)]
-    os.makedirs(OUT, exist_ok=True)
-    for t in glob.glob(f"{OUT}/*.tmp"):
+    os.makedirs(out, exist_ok=True)
+    for t in glob.glob(f"{out}/*.tmp"):
         os.remove(t)
-    print(f"{len(blocks):,} event blocks in {len(parts)} parts, {WORKERS} workers", flush=True)
+    todo = blocks
+    if screened:
+        known = [pd.read_csv(p) for p in glob.glob(f"{OUT}/part_*.csv")]
+        known = pd.concat(known) if known else pd.DataFrame(columns=["block", "ts", "base_fee_wei"])
+        known = known[known.block.isin(set(blocks))].drop_duplicates("block")
+        known.to_csv(f"{out}/reused.csv", index=False)
+        todo = [b for b in blocks if b not in set(known.block)]
+        print(f"{len(known):,} headers reused from the earlier full fetch", flush=True)
+    parts = [todo[i:i + PART] for i in range(0, len(todo), PART)]
+    print(f"{len(todo):,} {'screened' if screened else 'event'} blocks to fetch in {len(parts)} parts, "
+          f"{WORKERS} workers", flush=True)
 
     t0, done = time.time(), 0
     with ThreadPoolExecutor(WORKERS) as ex:
         for k, part in enumerate(parts):
-            path = f"{OUT}/part_{k:04d}.csv"
+            path = f"{out}/part_{k:04d}.csv"
             if os.path.exists(path):
                 continue
             rows = sorted(ex.map(header, part))
@@ -81,10 +96,10 @@ def main():
             left = (time.time() - t0) / done * (len(parts) - k - 1) / 3600
             print(f"  part {k + 1}/{len(parts)}  ({left:.1f} h left)", flush=True)
 
-    gas = pd.concat([pd.read_csv(p) for p in sorted(glob.glob(f"{OUT}/part_*.csv"))])
+    gas = pd.concat([pd.read_csv(p) for p in sorted(glob.glob(f"{out}/part_*.csv")) + glob.glob(f"{out}/reused.csv")])
     gas = gas.sort_values("block").drop_duplicates("block")
     if gas.block.tolist() != blocks:
-        sys.exit(f"coverage check failed: {len(gas):,} fetched vs {len(blocks):,} event blocks")
+        sys.exit(f"coverage check failed: {len(gas):,} fetched vs {len(blocks):,} blocks")
     gas.to_csv(period.GAS + ".tmp", index=False)
     os.replace(period.GAS + ".tmp", period.GAS)
 

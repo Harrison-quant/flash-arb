@@ -11,7 +11,8 @@ Stages (each cached, so a rerun resumes):
            Writes data/raw/<period>_opportunities.csv. Period: see period.py (FLASH_ARB_PERIOD).
   capture  Fetches the receipt of every closing transaction (stops if more than 300,000), classifies
            it and writes data/raw/<period>_closing_txs.csv, then prints the summary.
-Usage: python scan_august.py [check] [aave] [scan] [capture] | all   (stages run in that order)
+Usage: python scan_august.py [check] [aave] [screen] [scan] [capture] | all   (stages run in that order;
+  screen lists the blocks where a state passes the fee screen, for fetch_gas_aug.py screened)
 """
 import csv
 import glob
@@ -318,6 +319,38 @@ def usd_rates(pools):
     return {"USDC": 1.0, "USDT": eth / usdt_per_eth, "WETH": eth}
 
 
+def passes_screen(A, B):
+    """Screen: p_B (1 - f_A)(1 - f_B) > p_A, marginal and exact up to float precision."""
+    rA, rB = A.sqrtp / 2 ** 96, B.sqrtp / 2 ** 96
+    return (rB * rB) * (1 - A.fee_ofz / 1e6) * (1 - B.fee_zfo / 1e6) > (rA * rA) * (1 - 1e-9)
+
+
+def stage_screen():
+    """Blocks with at least one state passing the screen: the only blocks whose base fee the scan
+    uses (journal 2026-10-19, implementation change). Writes <RAW>/screen_blocks.csv."""
+    st = json.load(open(period.CHECKS_STATUS))
+    if not st["all_pass"]:
+        sys.exit("Checks did not pass; not screening.")
+    pools = initial_pools()
+    blocks, n_states, n_flag = {}, 0, 0
+    for tx in transactions():
+        blk = int(tx[0]["block"])
+        touched = []
+        for e in tx:
+            apply(pools[e["pool"]], e)
+            if e["pool"] not in touched:
+                touched.append(e["pool"])
+        for d in {d for p in touched for d in DIRS_BY_POOL[p]}:
+            n_states += 1
+            if passes_screen(pools[d[0]], pools[d[1]]):
+                n_flag += 1
+                blocks[blk] = blocks.get(blk, 0) + 1
+    path = f"{period.RAW}/screen_blocks.csv"
+    pd.DataFrame({"block": sorted(blocks), "flagged_states": [blocks[b] for b in sorted(blocks)]}).to_csv(path + ".tmp", index=False)
+    os.replace(path + ".tmp", path)
+    print(f"Screen: {n_states:,} states, {n_flag:,} passed, in {len(blocks):,} distinct blocks -> {path}")
+
+
 def stage_scan():
     st = json.load(open(period.CHECKS_STATUS))
     if not st["all_pass"]:
@@ -351,15 +384,15 @@ def stage_scan():
         if not dirs:
             continue
         rates = usd_rates(pools)
-        gas_usd = GAS_UNITS * base_fee[blk] * rates["WETH"] / 1e18
+        gas_usd = None   # only needed (and only fetched) at blocks where a state passes the screen
         for d in dirs:
             A, B = pools[d[0]], pools[d[1]]
             n_states += 1
             net = None
-            # Screen: p_B (1 - f_A)(1 - f_B) > p_A, marginal and exact up to float precision
-            rA, rB = A.sqrtp / 2 ** 96, B.sqrtp / 2 ** 96
-            if (rB * rB) * (1 - A.fee_ofz / 1e6) * (1 - B.fee_zfo / 1e6) > (rA * rA) * (1 - 1e-9):
+            if passes_screen(A, B):
                 n_flag += 1
+                if gas_usd is None:
+                    gas_usd = GAS_UNITS * base_fee[blk] * rates["WETH"] / 1e18
                 sized = size_trade(A, B)
                 if sized:
                     tok = PROFIT_TOKEN[PAIR[d[0]]]
@@ -410,7 +443,8 @@ def stage_scan():
             ep[f"reach_N{N}"] = still_open
             ep[f"net_at_N{N}"] = last[-1][2] if still_open and last else None
         out.append(ep)
-    df = pd.DataFrame(out)
+    # Fixed row order: set iteration order varies between runs (string hashing), values don't.
+    df = pd.DataFrame(out).sort_values(["open_ti", "buy_pool", "sell_pool"]).reset_index(drop=True)
     df.to_csv(period.OPPS + ".tmp", index=False)
     os.replace(period.OPPS + ".tmp", period.OPPS)
     with open(period.SCAN_COUNTS, "w") as f:
@@ -572,6 +606,8 @@ def main():
         stage_check()
     if stages & {"aave", "all"}:
         stage_aave()
+    if "screen" in stages:
+        stage_screen()
     if stages & {"scan", "all"}:
         stage_scan()
     if stages & {"capture", "all"}:
