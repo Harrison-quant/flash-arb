@@ -519,3 +519,36 @@ ARB pools reported but not gating. This concerns the verification step only, not
 are found or sized, so I'd log it as a correction rather than a variant.
 
 - Variants tested: 0 (the scan itself hasn't run).
+
+## 2026-10-18 - Check 2 revised (after seeing it fail), approved by Harrison
+
+**What happened, in order.** This revision was made after seeing the original check fail. It isn't a
+pre-registered rule.
+1. Tick maps: the plan said to build them by replaying every Mint and Burn since each pool's
+   creation. That would have taken 1 to 3 more days on the public endpoint, so it was replaced by
+   reading each pool's tick bitmap and ticks directly from the archive at block 489,802,913 (entry
+   "Tick maps: read from the archive"). All 12 pools match liquidity() at that block. The one pool
+   built both ways (ARB/USDC Uniswap V3 0.3%) is identical.
+2. That read exposed a bug in my swap port: Camelot V3 (Algebra 1.9) indexes its tick table by the
+   raw tick, not by tick / spacing. Its spacing is 10, so my code would have split Camelot swaps at
+   the wrong boundaries. It was fixed before any check ran (entry "Tick maps read; Camelot
+   tick-table fix").
+3. Check 1 passed (12,804 of 12,804).
+4. The original Check 2 (free exact-input replay must hit the event's sqrt price exactly for 99.9% of
+   swaps per pool, and within 1e-9 for all) failed in all 12 pools: exact shares of 0.11 to 0.75
+   (entry "Scan stopped: Check 2 failed as defined; diagnosis").
+5. Diagnosis: the free replay only ever overshoots, because many real swaps stop at a price limit or
+   are exact-output. Replaying with the event's own end price as the limit as well, 2,525,664 of
+   2,525,718 swaps are reproduced exactly in input, output and end price. That's 100.000% in the 11
+   non-ARB/USDC pools and 99.777% in ARB/USDC.
+
+**Revised Check 2 (approved by Harrison).** A swap counts as reproduced if either replay (free, or
+with the event's end price as the limit) gives exactly the event's input, output and end sqrt price.
+The bar is at least 99.9% reproduced in each pool of the 14 scanned pairs. The two ARB pools aren't in
+any scanned pair: they are reported but don't count towards pass/fail. The 1e-9 tolerance is dropped,
+because the test is now exact on all three integers. Check 1 is unchanged.
+
+This changes only how the swap maths is verified, not how opportunities are screened, sized or
+counted, so it's a correction and not a variant.
+
+- Variants tested: 0 so far. The main scan, when it runs, is variant 1.

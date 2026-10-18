@@ -3,14 +3,15 @@ and "plan approved with two changes".
 
 Stages (each cached, so a rerun resumes):
   check    Check 1 (tick map vs archive liquidity at all checkpoints) and Check 2 (replay every swap
-           with the exact maths). Writes data/aug_checks.csv. The scan refuses to run if a check fails.
+           with the exact maths, free and with the event's price as limit; revised version, see the
+           journal). Writes data/aug_checks.csv. The scan refuses to run if a check fails.
   aave     Aave V3 flash-loan premium and available balances at every checkpoint (comparison only).
   scan     Replays every transaction, screens both directions of the 14 pool pairs after each one,
            sizes flagged states exactly (flash swap on the buy-side pool), and builds opportunities.
            Writes data/raw/aug_opportunities.csv.
   capture  Fetches the receipt of every closing transaction (stops if more than 300,000), classifies
            it and writes data/raw/aug_closing_txs.csv, then prints the summary.
-Usage: python scan_august.py [check|aave|scan|capture|all]
+Usage: python scan_august.py [check] [aave] [scan] [capture] | all   (stages run in that order)
 """
 import csv
 import glob
@@ -121,7 +122,7 @@ def stage_check():
     cp_iter = iter(CPS[1:])
     next_cp = next(cp_iter)
     c1_fail, c1_n = [], 0
-    stats = {p: {"swaps": 0, "exact": 0, "within_1e9": 0, "max_rel": 0.0, "worst": ""} for p in POOLS}
+    stats = {p: {"swaps": 0, "exact": 0, "free_exact": 0, "limit_exact": 0, "worst": ""} for p in POOLS}
 
     def run_check1(cp):
         nonlocal c1_n
@@ -151,17 +152,20 @@ def stage_check():
             if e["event"] == "swap":
                 a0, a1 = int(e["amount0"]), int(e["amount1"])
                 zfo = a0 > 0
-                amt = a0 if zfo else a1
+                amt, out_want = (a0, -a1) if zfo else (a1, -a0)
                 if amt > 0:
-                    _, _, sp = pool.swap(zfo, amt)
+                    # Revised Check 2 (journal 2026-10-18): reproduced if the free replay or the replay
+                    # with the event's end price as limit gives exactly the event's input, output, price.
                     want = int(e["sqrtp"])
+                    free = pool.swap(zfo, amt) == (amt, out_want, want)
+                    lim = pool.swap(zfo, amt, limit=want) == (amt, out_want, want)
                     st = stats[p]
                     st["swaps"] += 1
-                    rel = abs(sp - want) / want
-                    st["exact"] += sp == want
-                    st["within_1e9"] += rel <= 1e-9
-                    if rel > st["max_rel"]:
-                        st["max_rel"], st["worst"] = rel, f"{e['block']}:{e['log_index']}"
+                    st["free_exact"] += free
+                    st["limit_exact"] += lim
+                    st["exact"] += free or lim
+                    if not (free or lim) and not st["worst"]:
+                        st["worst"] = f"{e['block']}:{e['log_index']}"
             apply(pool, e)
         n += 1
         if n % 200_000 == 0:
@@ -171,17 +175,22 @@ def stage_check():
         next_cp = next(cp_iter, None)
 
     rows, ok = [], not c1_fail
+    scanned = {p for d in DIRECTIONS for p in d}
     for p in POOLS:
         st = stats[p]
-        exact_share = st["exact"] / st["swaps"] if st["swaps"] else 1.0
-        passed = exact_share >= 0.999 and st["within_1e9"] == st["swaps"]
-        ok &= passed
+        n = st["swaps"] or 1
+        exact_share = st["exact"] / n
+        passed = exact_share >= 0.999
+        gating = p in scanned          # the ARB pools are reported but don't gate
+        if gating:
+            ok &= passed
         rows.append({"pool": p, "label": LABEL[p], "swaps": st["swaps"], "exact": st["exact"],
-                     "exact_share": round(exact_share, 6), "within_1e9": st["within_1e9"],
-                     "max_rel_diff": st["max_rel"], "worst_swap": st["worst"], "check2_pass": passed})
+                     "exact_share": round(exact_share, 6), "free_exact_share": round(st["free_exact"] / n, 6),
+                     "limit_exact_share": round(st["limit_exact"] / n, 6), "first_miss": st["worst"],
+                     "gating": gating, "check2_pass": passed})
     df = pd.DataFrame(rows)
     df.to_csv("data/aug_checks.csv", index=False)
-    print(df[["label", "swaps", "exact_share", "within_1e9", "max_rel_diff", "check2_pass"]].to_string(index=False))
+    print(df[["label", "swaps", "exact_share", "free_exact_share", "limit_exact_share", "gating", "check2_pass"]].to_string(index=False))
     print(f"Check 1: {c1_n - len(c1_fail):,} of {c1_n:,} pool-checkpoints match"
           + ("" if not c1_fail else f"; first failures: {c1_fail[:3]}"))
     with open("data/aug_checks_status.json", "w") as f:
@@ -535,14 +544,14 @@ def summarise(opp, rc):
 
 
 def main():
-    stage = sys.argv[1] if len(sys.argv) > 1 else "all"
-    if stage in ("check", "all"):
+    stages = set(sys.argv[1:]) or {"all"}
+    if stages & {"check", "all"}:
         stage_check()
-    if stage in ("aave", "all"):
+    if stages & {"aave", "all"}:
         stage_aave()
-    if stage in ("scan", "all"):
+    if stages & {"scan", "all"}:
         stage_scan()
-    if stage in ("capture", "all"):
+    if stages & {"capture", "all"}:
         stage_capture()
 
 
