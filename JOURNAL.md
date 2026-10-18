@@ -446,3 +446,39 @@ before any code runs. They are part of the main run (variant 1), not extra varia
   I fix the port and rerun the checks, and record it.
 
 - Variants tested: 1 (this run) once it runs.
+
+## 2026-10-18 - Tick maps: read from the archive instead of replaying history (before running)
+
+Step 0 of the scan method said the tick maps would be built by replaying every Mint and Burn from
+each pool's creation. On the public endpoint that has to download every log of the pool, swaps
+included, and it was on pool 2 of 12 after about 2.7 hours. The busiest pools (WETH/USDC 0.05%
+especially) have far more history, so the estimate was 1 to 3 more days. It was stopped.
+
+Replacement: read the tick state directly from the archive node at block 489,802,913 (the last block
+of July), which is the state the scan starts from. For each pool: read its tick spacing, read every
+word of the tick bitmap over the full tick range (tickBitmap on Uniswap V3 and PancakeSwap V3,
+tickTable on Camelot V3), then call ticks(t) for every set bit to get liquidityGross and
+liquidityNet. All through Multicall3 at that one block. Before writing, two sanity checks: every set
+bit must be an initialised tick with gross > 0, and the active liquidity implied by the map at the
+pool's tick must equal liquidity() at that block. August Mints and Burns are already in the event
+stream and are applied on top during the scan, as before.
+
+This changes where the starting tick map comes from, not what it should be, so it isn't a new
+variant. Checks 1 and 2 still run unchanged and are what verify it. As a cross-check, the one pool
+finished by the old method (ARB/USDC Uniswap V3 0.3%, 309 initialised ticks) is compared with the
+archive read.
+
+## 2026-10-18 - Tick maps read; Camelot tick-table fix (before the scan)
+
+- The archive read took about 7 minutes for all 12 pools (history replay: days). Every set bit was an
+  initialised tick, and in every pool the active liquidity from the map equals liquidity() at block
+  489,802,913. Initialised ticks: ARB/USDC Uni 0.3% 309; ARB/WETH Uni 0.05% 2,416; WBTC/WETH Uni
+  0.05% 1,300, Pancake 0.01% 2,621, Uni 0.3% 344; WETH/USDC Uni 0.05% 2,209, Uni 0.3% 505, Pancake
+  0.05% 1,386, Camelot 619, Pancake 0.01% 11,285; WETH/USDT Uni 0.05% 1,860, Uni 0.3% 503.
+- Cross-check: for ARB/USDC Uniswap V3 0.3%, the map built from full Mint/Burn history and the
+  archive read are identical (309 ticks, same net and gross).
+- Port bug found and fixed (expected risk named in the amendment entry): Camelot V3 (Algebra 1.9)
+  indexes its tick table by the raw tick (row = tick >> 8), not by tick / spacing as Uniswap and
+  PancakeSwap do. Its tick spacing is 10, so my port would have ended swap steps at the wrong row
+  boundaries for Camelot, which changes rounding. The pool model now takes a bitmap unit (1 for
+  Camelot, the tick spacing otherwise). Found on the archive read itself, before Check 2 ran.
