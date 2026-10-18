@@ -213,3 +213,71 @@ New entries go at the bottom; earlier entries aren't edited.
   on the L1 price estimate at the time and the transaction's size, and it isn't in the block header.
   It isn't covered here. It will be measured in phase 2 from the real contract transaction on a
   fork. Until then any cost figure is L2 gas only and understates the true cost.
+
+## 2026-10-18 - August data pulled and reconciled; gas fetched
+
+**Did**
+- pull_august.py fetched every log of the 12 universe pools for blocks 489,802,914 to 500,455,224
+  (all of August 2026, 10,652,311 blocks) from the public endpoint. It then rebuilt each pool's price
+  and active liquidity from the events and checked them against archive state. The first run was
+  killed mid-way (the session ended). The rerun reused the saved logs and the 112 complete archive
+  checkpoints, dropped the one partial checkpoint and fetched the rest.
+- fetch_gas_aug.py fetched baseFeePerGas at every block with a universe-pool event, as set out in the
+  gas entry above.
+
+**Checkpoints: 1,067, none skipped**
+- 1,067 checkpoints: the start state (block 489,802,913, the last block of July) plus the end of
+  each of 1,066 windows. Windows are 10,000 blocks; the last one is 2,311 blocks (500,452,914 to
+  500,455,224).
+- All 1,067 checkpoint files are present, each with all 12 pools. The 1,066 windows run back to back
+  from 489,802,914 to 500,455,224 with no gaps. That is 12,792 pool-window checks (1,066 x 12).
+
+**Reconciliation**
+- 12,792 of 12,792 pool-windows matched the archive exactly: sqrt price and active liquidity, as
+  integers. 0 mismatches, 0 refetches, 0 persistent mismatches.
+- The tick also matched at every checkpoint. Camelot's two directional fees, rebuilt from its Fee
+  events, matched the archive at all 1,066 checkpoints.
+- So the event data is complete for these pools. The rebuild rules (a Swap sets price, tick and
+  liquidity; a Mint or Burn changes liquidity when its range covers the current tick) hold for all
+  three pool types.
+
+**Events by pool** (August 2026; every log decoded to a known type, 0 unknown)
+
+| Pool | Swap | Mint | Burn | Collect | Fee | Other | Total | Blocks with a swap |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| WETH/USDC Uniswap V3 0.05% | 765,593 | 22,380 | 29,859 | 29,029 | 0 | 95 | 846,956 | 245,938 |
+| WETH/USDT Uniswap V3 0.05% | 387,079 | 9,084 | 10,518 | 10,463 | 0 | 65 | 417,209 | 158,558 |
+| WETH/USDC Camelot V3 | 242,937 | 303 | 657 | 650 | 159,425 | 0 | 403,972 | 193,532 |
+| WBTC/WETH PancakeSwap V3 0.01% | 280,148 | 384 | 666 | 648 | 0 | 1 | 281,847 | 170,305 |
+| WBTC/WETH Uniswap V3 0.05% | 219,958 | 4,609 | 12,421 | 11,797 | 0 | 60 | 248,845 | 104,370 |
+| WETH/USDC PancakeSwap V3 0.01% | 211,596 | 762 | 944 | 919 | 0 | 1 | 214,222 | 184,054 |
+| ARB/WETH Uniswap V3 0.05% | 203,130 | 1,918 | 3,590 | 3,562 | 0 | 60 | 212,260 | 156,477 |
+| WETH/USDC PancakeSwap V3 0.05% | 111,734 | 2,381 | 3,342 | 3,143 | 0 | 1 | 120,601 | 69,205 |
+| WETH/USDC Uniswap V3 0.3% | 63,752 | 1,591 | 3,168 | 3,069 | 0 | 60 | 71,640 | 18,346 |
+| ARB/USDC Uniswap V3 0.3% | 24,184 | 250 | 287 | 284 | 0 | 60 | 25,065 | 19,333 |
+| WETH/USDT Uniswap V3 0.3% | 10,880 | 271 | 382 | 379 | 0 | 60 | 11,972 | 9,120 |
+| WBTC/WETH Uniswap V3 0.3% | 4,727 | 437 | 802 | 771 | 0 | 59 | 6,796 | 3,502 |
+| **Total** | **2,525,718** | **44,370** | **66,636** | **64,714** | **159,425** | **522** | **2,861,385** | |
+
+- "Other" is CollectProtocol (482) and Flash (40). Camelot's Fee events (its dynamic fee changing)
+  are about 40% of its log count.
+- 855,735 distinct blocks have at least one event in some universe pool, which is 8.0% of August's
+  blocks. 798,528 of those have a swap.
+
+**Gas**
+- Coverage: 855,735 of 855,735 event blocks fetched, with no gaps.
+- Base fee: min 0.020000 gwei (the floor), median 0.020034, 99th percentile 0.0280, max 0.677
+  (block 497,099,509). 26.0% of event blocks are exactly at the floor, and 2,950 are above 0.05 gwei.
+- The check promised in the gas entry: the value differs between 93.2% of consecutive event blocks,
+  but by small amounts (median 0.26%, 90th percentile 1.4%, 99th percentile 5.2%). 1,003 changes are
+  above 10%, and 256 of those span a gap of more than one block. Event blocks are a median of 3
+  blocks apart (99th percentile 120, max 848). So carrying the value forward over quiet stretches
+  costs little accuracy at these levels.
+- At the median base fee, 350,000 gas units cost 0.000007 ETH, about $0.013 at the August 1 ETH
+  price. The L1 data fee isn't included (see the gas entry).
+
+**Files** (git-ignored, re-creatable with the scripts): data/raw/aug_events.csv.gz,
+data/raw/aug_gas.csv, data/raw/aug/checkpoints/. The reconciliation table data/aug_reconcile.csv is
+committed.
+
+- Variants tested: still 0. September is untouched.
