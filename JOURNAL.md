@@ -281,3 +281,122 @@ data/raw/aug_gas.csv, data/raw/aug/checkpoints/. The reconciliation table data/a
 committed.
 
 - Variants tested: still 0. September is untouched.
+
+## 2026-10-18 - Opportunity scan: method, fixed before running (August only)
+
+Nothing below has been run. This is the exact method, written before looking at any opportunity
+result. It applies to August 2026 (calibration) only. September stays untouched.
+
+**Scope**
+- 14 pool pairs, same pair only: WETH/USDC 10 (the 5 universe pools pairwise), WBTC/WETH 3,
+  WETH/USDT 1. The two ARB pools have no partner and aren't scanned. Triangular routes are out of
+  scope.
+- Both directions per pool pair. Route "A->B": pay token X into pool A, receive token Y, sell Y into
+  pool B for X. The borrowed token is X, and profit is measured in X.
+
+**Step 0: tick maps (needed for exact swaps)**
+- For each pool, replay every Mint and Burn from pool creation to the end of August (public-endpoint
+  logs) to get liquidityNet at every initialised tick. Combined with the August event stream, this
+  gives the full pool state after every transaction.
+- Check 1: at all 1,067 checkpoints, the active liquidity from the tick map at the archive tick must
+  equal the archive liquidity exactly.
+- Check 2: replay every August swap from its pre-swap state as an exact-input swap of the amount the
+  pool received. The simulated post-swap sqrt price must equal the event's exactly for at least 99.9%
+  of swaps in each pool, and be within 1e-9 (relative) for all of them. Exact-output swaps can differ
+  by input rounding, which is why the bar is 99.9% and not 100%. If any pool fails either check, the
+  scan stops and I report.
+
+**Step 1: screen (when a gap can exist)**
+- State is evaluated after every transaction that touches either pool of a pair, using the
+  post-transaction state, not just the end of each block. On Arbitrum, gaps can open and close
+  within one block, and those would be invisible at block level. States within a transaction aren't
+  considered.
+- Mid price p = token1 per token0 from sqrtPriceX96, adjusted for decimals. Fee f = the pool's fee
+  tier; for Camelot, the directional fee for the side being traded, as tracked from its Fee events.
+- Route A->B can be profitable at some size, before the loan fee and gas, only if the marginal price
+  after both pools' fees is better than break-even. Buying token0 in A and selling it in B, that means
+  p_B x (1 - f_A) x (1 - f_B) > p_A; the reverse direction mirrors it. This is exact at the margin, so
+  it is a necessary condition. Unlike the simple "gap > sum of fees" rule, it doesn't overcount.
+
+**Step 2: size and profit (exact pool maths)**
+- Swaps are simulated with a Python port of the Uniswap V3 core libraries, using exact integers:
+  TickMath.getSqrtRatioAtTick, SqrtPriceMath, SwapMath.computeSwapStep and FullMath.mulDiv with the
+  same rounding. Swaps cross initialised ticks using the tick maps. PancakeSwap V3 uses identical
+  maths (fee denominator 1e6). Camelot V3 (Algebra 1.9) uses the same step maths with its directional
+  fee; Check 2 confirms it. The protocol fee is ignored because it doesn't change what the trader
+  receives.
+- Gross profit g(x) = out_B(out_A(x)) - x, for integer input x of token X. Search range: 1 unit up to
+  the input that moves pool A's price to pool B's marginal price after fees, found by a swap with a
+  price limit. g is concave along this range, so a golden-section search on x finds the optimum,
+  stopping when the bracket is under max(1 unit, 1e-6 x).
+- Financing (fees read on-chain at every checkpoint, together with the available balances):
+  - Balancer V2 Vault (0xBA12222222228d8Ba445958a75a0704d566BF2C8): fee 0% at the snapshot
+    (getFlashLoanFeePercentage = 0). Usable only up to the vault's balance of token X. The cap is the
+    lower of its balances at the two checkpoints around the block. At the snapshot it held 104 WETH,
+    19,173 USDC, 71,396 USDT and 2.96 WBTC.
+  - Aave V3 Pool (0x794a61358D6845594F94dc1DB02A252b5b4814aD): FLASHLOAN_PREMIUM_TOTAL = 5 bps
+    (0.05%) at the snapshot, with flash loans enabled for all five tokens. Capped by the aToken's
+    underlying balance, the same way (30.2M USDC, 21,269 WETH, 10.7M USDT, 2,629 WBTC at the
+    snapshot).
+  - Rule: if the optimal x fits in Balancer, the loan fee is 0. Otherwise take the better of (a)
+    Balancer at x = its cap with fee 0, and (b) re-optimising g(x) - 0.0005x with Aave.
+  - Balancer V3 is ignored: at the snapshot its vault held almost nothing for these tokens
+    (0.73 WETH, 592 USDC).
+- Gas: 350,000 L2 gas units, fixed. This is my estimate for one flash loan plus two V3 swaps
+  (including some tick crossings), repayment and a profit check. Gas cost = 350,000 x base fee at that
+  block (fetched, or carried forward per the gas entry), converted to USD. It will be replaced by the
+  measured figure from phase 2.
+- The L1 data fee is excluded (see the gas entry), so every net figure here overstates profit
+  slightly.
+- USD conversion: the mid price of WETH/USDC Uniswap V3 0.05% in the same state, with USDC = $1.
+  WBTC goes through WBTC/WETH Uniswap V3 0.05%.
+- Net profit = g(x*) - loan fee - gas cost, in USD.
+
+**Step 3: opportunities**
+- An opportunity is a maximal run of consecutive post-transaction states, for one pool pair and one
+  direction, in which net profit > 0.
+- For each one I record the opening transaction (the first state where it appears), the opening
+  block, net profit and size at opening, the maximum net profit during the run, the financing source,
+  and the closing transaction (the first state where net profit is <= 0).
+- Reporting bins, fixed now: net profit > $0, > $0.10, > $1, > $10, > $100. No bot threshold is chosen
+  in this scan.
+
+**Step 4: who captured it**
+- For each closing transaction, fetch the transaction (from, to) and its receipt (status, timeboosted,
+  gasUsed, gasUsedForL1, effectiveGasPrice, and all logs). Receipts on Arbitrum carry a timeboosted
+  field (checked on one receipt).
+- Classification, from the receipt's ERC-20 Transfer logs (WETH included):
+  - "Atomic arbitrage": the combined net flow to {tx.from, tx.to} is >= 0 in every token and > 0 in
+    at least one. Sub-type "two-pool" if the transaction swaps in both pools of the pair in opposite
+    directions, otherwise "other route" (for example via Uniswap V4 or pools outside the universe).
+  - "Liquidity change": no swap in the pair's pools, but a Mint or Burn there removed the profit.
+  - "Other flow": everything else, for example an ordinary trade that happened to close the gap.
+  - Known blind spot: profit sent to a third address, or paid in native ETH, will be misclassified
+    as other flow.
+- Capturer: tx.to (contract) and tx.from (sender). I'll report the share of opportunities and of total
+  opening profit closed by the top 1, 3 and 10 addresses, each way. Address labels (router, known
+  searcher) are looked up afterwards, for description only.
+- Express lane: receipt.timeboosted = true. I'll report the share of opportunities and profit closed by
+  express-lane transactions.
+- Duration: blocks from opening to closing (0 = same block) and the number of transactions in between.
+  Arbitrum timestamps have one-second resolution, so sub-second timing is measured in blocks.
+
+**Step 5: what is left for a bot that is 200ms+ late**
+- An opportunity counts as reachable if it is still open after the last transaction of block
+  (opening block + N). Primary N = 2, about 0.5 s at roughly 0.25 s per block: the 200ms delay plus
+  detecting and sending. N = 1, 4 and 8 are reported alongside, without choosing between them. For a
+  reachable opportunity, the profit counted is the net profit in that later state, not at opening.
+- Assumed: our bot isn't in the express lane and doesn't win priority ties.
+
+**Stop rules and budget**
+- If more than 300,000 closing transactions need fetching, stop and report before fetching
+  (free-tier compute units).
+- Step 0 runs first. If Check 1 or Check 2 fails, stop.
+
+**Counting**
+- This method is variant 1. Reporting the N values and profit bins alongside doesn't count as extra
+  variants, because nothing is selected from them.
+- Open question for Harrison before running: a Uniswap-style flash swap (borrow from pool A itself,
+  repaid in the callback) needs no external loan and adds no fee beyond pool A's own, which is
+  already in the maths. It is cheaper than Aave for large trades. Should financing include it? If
+  added after the primary run, it counts as variant 2.
