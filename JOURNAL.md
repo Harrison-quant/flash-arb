@@ -619,3 +619,90 @@ from one volatile moment. This is consistent with the starting expectation that 
 for a retail bot. Nothing has been tuned on these results.
 
 - Variants tested: 1.
+
+## 2026-10-18 - The 8 August opportunities over $100, and design freeze before September
+
+**The 8 opportunities over $100** (August, flash swap; buy pool -> sell pool; closing tx):
+
+| Open block | Pair | Buy -> sell | Net | Closing tx (block) | Closer (tx.to) | Express lane |
+|---|---|---|---|---|---|---|
+| 496,292,234 | WBTC/WETH | Uni 0.3% -> Uni 0.05% | $620.42 | 0xd98a9cae...3fda (496,292,235) | 0x93c3...dd17 | yes |
+| 496,292,234 | WBTC/WETH | Uni 0.3% -> Pancake 0.01% | $560.19 | same | same | yes |
+| 496,292,236 | WBTC/WETH | Uni 0.3% -> Uni 0.05% | $662.40 | 0x3838a538...b848 (496,292,236) | 0x93c3...dd17 | yes |
+| 496,292,236 | WBTC/WETH | Uni 0.3% -> Pancake 0.01% | $597.36 | same | same | yes |
+| 496,848,609 | WETH/USDC | Uni 0.05% -> Camelot | $173.77 | 0x2b705547...c3a5 (496,848,610) | 0x09ef...0e0c | no |
+| 496,848,609 | WETH/USDC | Uni 0.3% -> Camelot | $145.16 | same | same | no |
+| 499,997,853 | WETH/USDC | Uni 0.05% -> Pancake 0.05% | $157.48 | 0x9a28d60e...7216 (499,997,854) | 0x93c3...dd17 | no |
+| 499,997,853 | WETH/USDC | Uni 0.05% -> Camelot | $142.20 | 0xe56f7f44...d977 (499,997,854) | 0xeccc...b7b | no |
+
+**The WBTC/WETH 0.3% cases, checked by hand:**
+- What opened them: two transactions two blocks apart (0x7ac980b5... and 0x51cdb53d...), from two
+  different senders through the same unverified contract 0x3b994b48.... Each one takes about 8.7
+  WETH from the 0.3% pool by flash swap, pays it to Compound III's WETH market (cWETHv3,
+  0x6f7D514b..., name read on-chain), gets about 0.30 WBTC back, repays the pool about 0.296 WBTC,
+  and keeps about 0.01 WBTC. That's the pattern of buying a liquidated borrower's WBTC collateral
+  at a discount. These are liquidations routed through the thinnest WBTC/WETH pool. Each pushed its
+  price down about 6% (30.76 to 28.83 and 28.78 WETH per WBTC; the deep pools stayed at about 30.74).
+- Thin liquidity: active liquidity in the 0.3% pool was about 5.5e14 against 7.0e16 in the Uniswap
+  0.05% pool, about 130 times thinner. That's why a $19k trade moved it 6%. The dislocation is real,
+  not a data artefact.
+- Price limits and rounding: Check 2 reproduced every swap in this pool exactly (input, output and
+  price), including these. The opportunity profits come from the same exact maths.
+- Fee-on-transfer: none. In the receipts, the WBTC and WETH Transfer amounts into and out of the pool
+  equal the swap amounts exactly (for example 29,576,301 WBTC units in, 8,761,493,279,397,117,945
+  WETH out).
+- Who took them: both times, contract 0x93c3...dd17 bought the cheap WBTC back from the 0.3% pool in
+  the next transaction slots, through the express lane, swapping in that one pool only (so
+  classified as one-sided). At block 496,292,236 an atomic two-pool arbitrage (0xb49fb3f7...) also
+  took part of the gap before 0x93c3 closed it. A rough check of 0x93c3's first trade: 0.28196 WBTC
+  for 8.390 WETH, worth about 8.667 WETH in the deep pool, so about 0.28 WETH gross, which matches
+  the $620 figure in size.
+
+**What this means for the August figures (description only; nothing in the method changes):**
+- Overlap: when one pool is knocked out of line, every pair that includes it opens at the same time,
+  but the dislocation can only be taken once. The totals in the results entry add across pool
+  pairs, so they double-count. 1,898 of the 14,837 opening transactions opened more than one
+  opportunity. Keeping only the largest per opening transaction gives $3,274 instead of $6,013. The
+  true extractable figure is somewhere between, probably nearer the lower one.
+- Concentration: the 4 WBTC rows are $2,440 of the $2,459 earned on all WBTC/WETH 0.3% pairs, $2,440
+  of the $2,634 of express-lane one-sided profit, and most of 0x93c3's $2,862. The 50.9%
+  express-lane share of one-sided profit is essentially two liquidation backruns. Without them it is
+  about 7%.
+
+**Design freeze.** From here the design is frozen, unchanged from the entries "Opportunity scan:
+method", "plan approved with two changes", "Tick maps: read from the archive", "Tick maps read;
+Camelot tick-table fix" and "Check 2 revised":
+- Universe: the same 12 pools (fixed at the 1 August snapshot); 14 pool pairs, both directions.
+- Data: every event of the 12 pools from the public endpoint, reconciled against archive state every
+  10,000 blocks (refetch on mismatch). Base fee at event blocks only, carried forward. L1 data fee
+  excluded.
+- Tick maps: read from the archive at the block before the period starts, with the same sanity
+  checks.
+- Checks: Check 1 at every checkpoint, revised Check 2 (at least 99.9% exact per scanned pool; ARB
+  pools reported only). The scan doesn't run if either fails.
+- Screen, exact sizing, flash swap on the buy-side pool, Aave V3 comparison (premium and balances
+  read on-chain), 350,000 gas units, opportunity definition, $0/$0.10/$1/$10/$100 bins, the
+  three-way capture classification with express-lane share, top-address concentration, durations,
+  N = 1/2/4/8 (2 primary), and the 300,000 closing-transaction stop rule.
+- Code: v3math.py, read_ticks.py, pull_august.py, fetch_gas_aug.py, scan_august.py at commit fb27a79.
+  For September the only changes allowed are the block range and the file paths, through one
+  setting.
+
+**Proposed September run (not started):**
+- Blocks 500,455,225 to 510,496,863 (2026-09-01 00:00 to 2026-09-30 23:59:59 UTC). That's 10,041,639
+  blocks, starting right after August's last block, with 1,006 checkpoints (the start state at
+  500,455,224 plus 1,005 windows of 10,000; the last is 1,639 blocks).
+- Steps: (1) event pull with reconciliation, (2) base fee at event blocks, (3) tick maps from the
+  archive at 500,455,224, (4) check, aave, scan, capture. Steps 1 and 2 are the slow ones (August's
+  took several hours each on the free endpoints) and run in a separate window. Outputs go under
+  data/raw/sep/ and data/sep_*, so August files are untouched.
+- Report: the same summary as August, side by side. No threshold or setting is chosen from
+  September. September is looked at once.
+
+**Open question for Harrison (reporting only):** add two descriptive figures to both months'
+summaries, computed from the same opportunity rows: (a) the total after keeping only the largest
+opportunity per opening transaction, and (b) the totals with the top 3 opening transactions by
+profit removed. They select nothing and change no opportunity. If approved, they'd be added and
+recomputed for August before September is looked at.
+
+- Variants tested: 1.
