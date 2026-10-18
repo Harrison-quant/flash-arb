@@ -482,3 +482,40 @@ archive read.
   PancakeSwap do. Its tick spacing is 10, so my port would have ended swap steps at the wrong row
   boundaries for Camelot, which changes rounding. The pool model now takes a bitmap unit (1 for
   Camelot, the tick spacing otherwise). Found on the archive read itself, before Check 2 ran.
+
+## 2026-10-18 - Scan stopped: Check 2 failed as defined; diagnosis
+
+Step 0 ran on August (scan_august.py check). No opportunity has been computed.
+
+**Check 1 passed:** 12,804 of 12,804 pool-checkpoints (12 pools x 1,067 checkpoints) match the archive
+exactly: active liquidity from the tick map, tracked liquidity and tick.
+
+**Check 2 failed as written.** Replaying each swap as exact-input of the amount the pool received, with
+no price limit, reproduced the event's sqrt price exactly for only 11% to 75% of swaps per pool,
+against the 99.9% bar. All swaps in every pool were within 1e-9 (relative), except 24 of 4,727 in
+WBTC/WETH Uniswap V3 0.3% (max 1.38e-9). Per pool (exact share): ARB/USDC 0.534, ARB/WETH 0.436,
+WBTC/WETH Uni 0.05% 0.304, Pancake 0.01% 0.294, Uni 0.3% 0.305, WETH/USDC Uni 0.05% 0.152, Uni 0.3%
+0.109, Pancake 0.05% 0.324, Camelot 0.550, Pancake 0.01% 0.750, WETH/USDT Uni 0.05% 0.157, Uni 0.3%
+0.501. Full table: data/aug_checks.csv.
+
+**Diagnosis (check2_diagnose.py).** When the free replay misses, it always ends beyond the event's
+price and never short of it. That is what happens if the real swap stopped at a price limit (normal
+for arbitrage bots) or was exact-output: given the same input with no limit, the replay keeps going.
+The plan expected only exact-output swaps to differ and set the 99.9% bar on that assumption, which
+was wrong. Replaying each swap a second way, with the event's own end price as the price limit, and
+counting a swap as reproduced if either replay gives exactly the event's input, output and end price
+(all three integers):
+- 2,525,664 of 2,525,718 swaps (99.998%) reproduced exactly.
+- 11 of 12 pools: 100.000%. Every pool in the 14 scanned pairs is among them.
+- ARB/USDC Uniswap V3 0.3% (not in any scanned pair): 24,130 of 24,184 (99.777%). In the 54
+  exceptions, input and end price match but the replay's output is 170 to 562 units higher. That
+  fits exact-output swaps, where the pool delivers exactly the requested amount and the rounded-up
+  input could have bought slightly more.
+My reading is that the swap maths and tick maps are exact and the check was badly specified, not
+that the port is wrong. Changing a check after seeing it fail is Harrison's decision, so the scan is
+stopped here. Proposed revised Check 2: a swap counts as reproduced if either replay matches input,
+output and end price exactly; the bar is 99.9% per pool for the pools in scanned pairs, with the two
+ARB pools reported but not gating. This concerns the verification step only, not how opportunities
+are found or sized, so I'd log it as a correction rather than a variant.
+
+- Variants tested: 0 (the scan itself hasn't run).
