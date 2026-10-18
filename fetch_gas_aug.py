@@ -1,4 +1,4 @@
-"""Base fee per block for August 2026, fetched only at blocks where a universe pool had an event.
+"""Base fee per block for one month (August 2026 by default; FLASH_ARB_PERIOD=sep, see period.py), fetched only at blocks where a universe pool had an event.
 
 Method (JOURNAL.md, "Gas data: base fee at event blocks only"):
 - Blocks: every block in data/raw/aug_events.csv.gz (written by pull_august.py after
@@ -20,11 +20,12 @@ from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 import requests
 
+import period
 from pool_list import RPC, run
 
 PART = 10_000
 WORKERS = int(os.getenv("GAS_WORKERS", "8"))
-OUT = "data/raw/aug/gas"
+OUT = f"{period.RAW}/gas"
 session = requests.Session()
 
 
@@ -54,7 +55,7 @@ def base_fee_at(gas, block):
 
 
 def main():
-    src = "data/raw/aug_events.csv.gz"
+    src = period.EVENTS
     if not os.path.exists(src):
         sys.exit(f"{src} not found: run pull_august.py to completion first")
     blocks = sorted(pd.read_csv(src, usecols=["block"]).block.unique().tolist())
@@ -84,8 +85,8 @@ def main():
     gas = gas.sort_values("block").drop_duplicates("block")
     if gas.block.tolist() != blocks:
         sys.exit(f"coverage check failed: {len(gas):,} fetched vs {len(blocks):,} event blocks")
-    gas.to_csv("data/raw/aug_gas.csv.tmp", index=False)
-    os.replace("data/raw/aug_gas.csv.tmp", "data/raw/aug_gas.csv")
+    gas.to_csv(period.GAS + ".tmp", index=False)
+    os.replace(period.GAS + ".tmp", period.GAS)
 
     g = gas.base_fee_wei / 1e9
     changes = int((gas.base_fee_wei.diff().fillna(0) != 0).sum())

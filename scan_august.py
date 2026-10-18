@@ -4,13 +4,13 @@ and "plan approved with two changes".
 Stages (each cached, so a rerun resumes):
   check    Check 1 (tick map vs archive liquidity at all checkpoints) and Check 2 (replay every swap
            with the exact maths, free and with the event's price as limit; revised version, see the
-           journal). Writes data/aug_checks.csv. The scan refuses to run if a check fails.
+           journal). Writes data/<period>_checks.csv. The scan refuses to run if a check fails.
   aave     Aave V3 flash-loan premium and available balances at every checkpoint (comparison only).
   scan     Replays every transaction, screens both directions of the 14 pool pairs after each one,
            sizes flagged states exactly (flash swap on the buy-side pool), and builds opportunities.
-           Writes data/raw/aug_opportunities.csv.
+           Writes data/raw/<period>_opportunities.csv. Period: see period.py (FLASH_ARB_PERIOD).
   capture  Fetches the receipt of every closing transaction (stops if more than 300,000), classifies
-           it and writes data/raw/aug_closing_txs.csv, then prints the summary.
+           it and writes data/raw/<period>_closing_txs.csv, then prints the summary.
 Usage: python scan_august.py [check] [aave] [scan] [capture] | all   (stages run in that order)
 """
 import csv
@@ -28,15 +28,16 @@ import pandas as pd
 import requests
 from web3 import Web3
 
+import period
 import v3math
 from pool_list import RPC, TOKENS, run, w3
 from pull_august import DEX, POOLS, word
 
-B0, B1 = 489_802_914, 500_455_224
+B0, B1 = period.B0, period.B1
 WINDOW = 10_000
 CPS = list(range(B0 - 1, B1, WINDOW)) + [B1]
 GAS_UNITS = 350_000
-EVENTS_FILE = "data/raw/aug_events.csv.gz"
+EVENTS_FILE = period.EVENTS
 MAX_CLOSING = 300_000
 
 pools_df = pd.read_csv("data/pools.csv", comment="#")
@@ -59,13 +60,13 @@ def fee_pips(p):
 
 
 def checkpoint(block):
-    rows = list(csv.DictReader(open(f"data/raw/aug/checkpoints/{block}.csv")))
+    rows = list(csv.DictReader(open(f"{period.RAW}/checkpoints/{block}.csv")))
     return {r["pool"]: r for r in rows}
 
 
 def initial_pools():
     """Pool objects at the end of July: archive state at block B0-1 plus the tick maps."""
-    meta = {r["pool"]: r for r in csv.DictReader(open("data/raw/ticks/meta.csv"))}
+    meta = {r["pool"]: r for r in csv.DictReader(open(f"{period.TICKS}/meta.csv"))}
     start = checkpoint(B0 - 1)
     pools = {}
     for p in POOLS:
@@ -76,7 +77,7 @@ def initial_pools():
             fz = fo = fee_pips(p)
         pool = v3math.Pool(int(meta[p]["tick_spacing"]), int(s["sqrtp"]), int(s["tick"]), int(s["liquidity"]), fz, fo,
                            unit=int(meta[p]["bitmap_unit"]))
-        for r in csv.DictReader(open(f"data/raw/ticks/{p}.csv")):
+        for r in csv.DictReader(open(f"{period.TICKS}/{p}.csv")):
             t, net, gross = int(r["tick"]), int(r["net"]), int(r["gross"])
             pool.net[t], pool.gross[t] = net, gross
             pool.init.append(t // pool.unit)
@@ -189,14 +190,14 @@ def stage_check():
                      "limit_exact_share": round(st["limit_exact"] / n, 6), "first_miss": st["worst"],
                      "gating": gating, "check2_pass": passed})
     df = pd.DataFrame(rows)
-    df.to_csv("data/aug_checks.csv", index=False)
+    df.to_csv(period.CHECKS, index=False)
     print(df[["label", "swaps", "exact_share", "free_exact_share", "limit_exact_share", "gating", "check2_pass"]].to_string(index=False))
     print(f"Check 1: {c1_n - len(c1_fail):,} of {c1_n:,} pool-checkpoints match"
           + ("" if not c1_fail else f"; first failures: {c1_fail[:3]}"))
-    with open("data/aug_checks_status.json", "w") as f:
+    with open(period.CHECKS_STATUS, "w") as f:
         json.dump({"check1_checks": c1_n, "check1_failures": len(c1_fail), "all_pass": bool(ok)}, f)
     if not ok:
-        sys.exit("A check failed: the scan will not run. See data/aug_checks.csv.")
+        sys.exit(f"A check failed: the scan will not run. See {period.CHECKS}.")
     print("All checks passed.")
 
 
@@ -209,7 +210,7 @@ ATOKENS = {"USDC": "0x724dc807b04555b71ed48a6896b6F41593b8C637",
 
 def stage_aave():
     from pull_august import mc
-    path = "data/raw/aug/aave_checkpoints.csv"
+    path = f"{period.RAW}/aave_checkpoints.csv"
     have = set()
     if os.path.exists(path):
         have = {int(r["block"]) for r in csv.DictReader(open(path))}
@@ -244,7 +245,7 @@ def stage_aave():
 
 
 def load_aave():
-    df = pd.read_csv("data/raw/aug/aave_checkpoints.csv").drop_duplicates("block").sort_values("block")
+    df = pd.read_csv(f"{period.RAW}/aave_checkpoints.csv").drop_duplicates("block").sort_values("block")
     return df.block.values, df
 
 
@@ -318,11 +319,11 @@ def usd_rates(pools):
 
 
 def stage_scan():
-    st = json.load(open("data/aug_checks_status.json"))
+    st = json.load(open(period.CHECKS_STATUS))
     if not st["all_pass"]:
         sys.exit("Checks did not pass; not scanning.")
     pools = initial_pools()
-    gas = pd.read_csv("data/raw/aug_gas.csv")
+    gas = pd.read_csv(period.GAS)
     base_fee = dict(zip(gas.block.values.tolist(), gas.base_fee_wei.values.tolist()))
     aave_blocks, aave = load_aave()
 
@@ -410,9 +411,9 @@ def stage_scan():
             ep[f"net_at_N{N}"] = last[-1][2] if still_open and last else None
         out.append(ep)
     df = pd.DataFrame(out)
-    df.to_csv("data/raw/aug_opportunities.csv.tmp", index=False)
-    os.replace("data/raw/aug_opportunities.csv.tmp", "data/raw/aug_opportunities.csv")
-    with open("data/raw/aug_scan_counts.json", "w") as f:
+    df.to_csv(period.OPPS + ".tmp", index=False)
+    os.replace(period.OPPS + ".tmp", period.OPPS)
+    with open(period.SCAN_COUNTS, "w") as f:
         json.dump({"states_evaluated": n_states, "states_flagged": n_flag, "opportunities": len(df)}, f)
     print(f"Scan done: {n_states:,} states evaluated, {n_flag:,} flagged by the screen, {len(df):,} opportunities")
 
@@ -454,12 +455,12 @@ def receipt_summary(h):
 
 
 def stage_capture():
-    opp = pd.read_csv("data/raw/aug_opportunities.csv")
+    opp = pd.read_csv(period.OPPS)
     closing = sorted(set(opp.close_tx.dropna()))
     print(f"{len(opp):,} opportunities, {len(closing):,} distinct closing transactions")
     if len(closing) > MAX_CLOSING:
         sys.exit(f"More than {MAX_CLOSING:,} closing transactions: stopping before fetching (stop rule).")
-    d = "data/raw/aug/receipts"
+    d = f"{period.RAW}/receipts"
     os.makedirs(d, exist_ok=True)
     done = set()
     for p in glob.glob(f"{d}/part_*.csv"):
@@ -475,7 +476,7 @@ def stage_capture():
             os.replace(path + ".tmp", path)
             print(f"  receipts part {k + 1}/{len(parts)}", flush=True)
     rc = pd.concat([pd.read_csv(p) for p in glob.glob(f"{d}/part_*.csv")]).drop_duplicates("tx_hash")
-    rc.to_csv("data/raw/aug_closing_txs.csv", index=False)
+    rc.to_csv(period.CLOSING, index=False)
     summarise(opp, rc)
 
 
@@ -495,16 +496,29 @@ def classify(row):
 def summarise(opp, rc):
     opp = opp.merge(rc, left_on="close_tx", right_on="tx_hash", how="left")
     opp["group"] = opp.apply(classify, axis=1)
-    opp.to_csv("data/raw/aug_opportunities_classified.csv", index=False)
-    counts = json.load(open("data/raw/aug_scan_counts.json"))
+    opp.to_csv(period.OPPS.replace(".csv", "_classified.csv"), index=False)
+    counts = json.load(open(period.SCAN_COUNTS))
     P = opp.open_net_usd
-    print("\n=== SUMMARY (August 2026, primary = flash swap) ===")
+    print(f"\n=== SUMMARY ({period.NAME}, primary = flash swap) ===")
     print(f"States evaluated {counts['states_evaluated']:,}; flagged by screen {counts['states_flagged']:,}; "
           f"opportunities {len(opp):,}")
-    for b in (0, 0.10, 1, 10, 100):
-        s = opp[P > b]
-        print(f"  opening net > ${b:g}: {len(s):,} opportunities, total opening net ${s.open_net_usd.sum():,.2f}")
-    print("Opening net USD percentiles:", P.quantile([.5, .9, .99, 1]).round(4).to_dict())
+    # Reporting correction (journal 2026-10-18): primary totals keep only the largest opportunity per
+    # opening transaction; the same figures without the top 3 opening transactions are shown alongside.
+    best = opp.sort_values("open_net_usd", ascending=False).drop_duplicates("open_tx")
+    top3 = best.open_tx.head(3).tolist()
+    print("Top 3 opening transactions (removed in the 'ex top 3' lines):")
+    for t, b, v in zip(best.open_tx.head(3), best.open_block.head(3), best.open_net_usd.head(3)):
+        print(f"  {t} block {b} ${v:,.2f}")
+    for name, sub in (("PRIMARY, largest per opening tx", best),
+                      ("largest per opening tx, ex top 3", best[~best.open_tx.isin(top3)]),
+                      ("all pool pairs (overlapping)", opp)):
+        print(f"\n  [{name}]")
+        for b in (0, 0.10, 1, 10, 100):
+            s = sub[sub.open_net_usd > b]
+            print(f"  opening net > ${b:g}: {len(s):,} opportunities, total opening net ${s.open_net_usd.sum():,.2f}")
+    print("\nOpening net USD percentiles (largest per opening tx):",
+          best.open_net_usd.quantile([.5, .9, .99, 1]).round(4).to_dict())
+    print("Opening net USD percentiles (all pool pairs):", P.quantile([.5, .9, .99, 1]).round(4).to_dict())
     print("Max net during run, total: $%.2f" % opp.max_net_usd.sum())
     print("\nBy pool pair (direction-agnostic):")
     opp["pool_pair"] = [" vs ".join(sorted([LABEL[a], LABEL[b]])) for a, b in zip(opp.buy_pool, opp.sell_pool)]
@@ -533,6 +547,15 @@ def summarise(opp, rc):
               f"{shn.iloc[min(2, len(shn) - 1)]:.1%}, top10 {shn.iloc[min(9, len(shn) - 1)]:.1%}")
         print(top.head(10).round(2).to_string())
     print("\nLeft for a late bot:")
+    n_events = opp.open_tx.nunique()
+    for name, sub in (("PRIMARY, largest per opening tx", opp),
+                      ("largest per opening tx, ex top 3", opp[~opp.open_tx.isin(top3)])):
+        print(f"  [{name}]")
+        for N in (1, 2, 4, 8):
+            v = sub[sub[f"reach_N{N}"]].groupby("open_tx")[f"net_at_N{N}"].max().dropna()
+            print(f"  N={N}: {len(v):,} opening txs still open ({len(v) / n_events:.1%} of {n_events:,}); "
+                  f"net at that point total ${v.sum():,.2f}; > $1: {(v > 1).sum():,}; > $10: {(v > 10).sum():,}")
+    print("  [all pool pairs (overlapping)]")
     for N in (1, 2, 4, 8):
         s = opp[opp[f"reach_N{N}"]]
         v = s[f"net_at_N{N}"].dropna()

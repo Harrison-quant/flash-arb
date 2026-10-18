@@ -17,13 +17,14 @@ import time
 
 from web3 import Web3
 
+import period
 import v3math
 from pool_list import RPC, run, w3
 from pull_august import DEX, POOLS, mc, word
 
-B0 = 489_802_914
+B0 = period.B0
 BLOCK = B0 - 1            # end of July; the scan starts from this state
-OUT = "data/raw/ticks"
+OUT = period.TICKS
 BATCH = 400
 
 

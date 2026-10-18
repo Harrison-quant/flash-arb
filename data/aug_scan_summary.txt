@@ -6,12 +6,34 @@ Scan done: 14,197,262 states evaluated, 205,088 flagged by the screen, 17,661 op
 
 === SUMMARY (August 2026, primary = flash swap) ===
 States evaluated 14,197,262; flagged by screen 205,088; opportunities 17,661
+Top 3 opening transactions (removed in the 'ex top 3' lines):
+  0x51cdb53da28a4c0f0e1955c0ebb0314dca8d1c0a759d810cfe38358dc3329d9d block 496292236 $662.40
+  0x7ac980b59ce2331d1ed4b2be33f3c1aad1e86c087b3eaeafc462b3582c942a04 block 496292234 $620.42
+  0x652f60c68eb10b16e33dec01fd3b7e345a9351eb07b8f1467b4608b0f9d6bd9e block 496848609 $173.77
+
+  [PRIMARY, largest per opening tx]
+  opening net > $0: 14,837 opportunities, total opening net $3,274.11
+  opening net > $0.1: 1,495 opportunities, total opening net $3,045.58
+  opening net > $1: 200 opportunities, total opening net $2,707.57
+  opening net > $10: 26 opportunities, total opening net $2,213.52
+  opening net > $100: 4 opportunities, total opening net $1,614.08
+
+  [largest per opening tx, ex top 3]
+  opening net > $0: 14,834 opportunities, total opening net $1,817.51
+  opening net > $0.1: 1,492 opportunities, total opening net $1,588.98
+  opening net > $1: 197 opportunities, total opening net $1,250.97
+  opening net > $10: 23 opportunities, total opening net $756.92
+  opening net > $100: 1 opportunities, total opening net $157.48
+
+  [all pool pairs (overlapping)]
   opening net > $0: 17,661 opportunities, total opening net $6,012.51
   opening net > $0.1: 2,249 opportunities, total opening net $5,731.95
   opening net > $1: 371 opportunities, total opening net $5,234.34
   opening net > $10: 53 opportunities, total opening net $4,344.12
   opening net > $100: 8 opportunities, total opening net $3,058.99
-Opening net USD percentiles: {0.5: 0.0126, 0.9: 0.1317, 0.99: 2.4764, 1.0: 662.4046}
+
+Opening net USD percentiles (largest per opening tx): {0.5: 0.0108, 0.9: 0.1005, 0.99: 1.3752, 1.0: 662.4046}
+Opening net USD percentiles (all pool pairs): {0.5: 0.0126, 0.9: 0.1317, 0.99: 2.4764, 1.0: 662.4046}
 Max net during run, total: $7004.30
 
 By pool pair (direction-agnostic):
@@ -69,10 +91,20 @@ from
 0xe6d39b9aad9e0b98037b1d244cbe56311cf1b094    47    89.58
 
 Left for a late bot:
+  [PRIMARY, largest per opening tx]
+  N=1: 2,010 opening txs still open (13.5% of 14,837); net at that point total $539.73; > $1: 51; > $10: 10
+  N=2: 633 opening txs still open (4.3% of 14,837); net at that point total $352.09; > $1: 34; > $10: 6
+  N=4: 192 opening txs still open (1.3% of 14,837); net at that point total $253.36; > $1: 15; > $10: 6
+  N=8: 76 opening txs still open (0.5% of 14,837); net at that point total $183.39; > $1: 3; > $10: 3
+  [largest per opening tx, ex top 3]
+  N=1: 2,010 opening txs still open (13.5% of 14,837); net at that point total $539.73; > $1: 51; > $10: 10
+  N=2: 633 opening txs still open (4.3% of 14,837); net at that point total $352.09; > $1: 34; > $10: 6
+  N=4: 192 opening txs still open (1.3% of 14,837); net at that point total $253.36; > $1: 15; > $10: 6
+  N=8: 76 opening txs still open (0.5% of 14,837); net at that point total $183.39; > $1: 3; > $10: 3
+  [all pool pairs (overlapping)]
   N=1: 2,193 still open (12.4%); net at that point total $641.46; > $1: 69; > $10: 12
   N=2: 672 still open (3.8%); net at that point total $407.96; > $1: 43; > $10: 8
   N=4: 198 still open (1.1%); net at that point total $293.16; > $1: 18; > $10: 8
   N=8: 79 still open (0.4%); net at that point total $223.14; > $1: 4; > $10: 4
 
 Aave comparison: positive for 1,702 of 17,661; total $4,777.40 vs flash swap $6,012.51
-exit 0  

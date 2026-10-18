@@ -1,4 +1,4 @@
-"""Pull August 2026 pool events for the 12 universe pools, and reconcile them against archive state.
+"""Pull one month's pool events (August 2026 by default; FLASH_ARB_PERIOD=sep for September, see period.py) for the 12 universe pools, and reconcile them against archive state.
 
 Stage 1 (fetch): every log of the 12 pools from the first block of 2026-08-01 to the last block of
   2026-08-31, from the public endpoint, in 20,000-block chunks (split further if the node refuses).
@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 import pandas as pd
 from web3 import Web3
 
+import period
 from pool_list import RPC, run, snapshot_block, w3
 
 PUBLIC = "https://arb1.arbitrum.io/rpc"
@@ -32,7 +33,7 @@ logs_w3 = Web3(Web3.HTTPProvider(os.getenv("ARB_LOGS_RPC_URL") or PUBLIC, reques
 
 WINDOW = 10_000
 CHUNK = 20_000
-OUT = "data/raw/aug"
+OUT = period.RAW
 MULTICALL3 = "0xcA11bde05977b3631167028862bE2a173976CA11"
 
 pools = pd.read_csv("data/pools.csv", comment="#")
@@ -269,9 +270,8 @@ def rebuild(start, evs, camelot):
 
 
 def main():
-    b0 = snapshot_block(datetime(2026, 8, 1, tzinfo=timezone.utc))
-    b1 = snapshot_block(datetime(2026, 9, 1, tzinfo=timezone.utc)) - 1
-    print(f"August 2026: blocks {b0:,} to {b1:,} ({b1 - b0 + 1:,} blocks)")
+    b0, b1 = period.B0, period.B1
+    print(f"{period.NAME}: blocks {b0:,} to {b1:,} ({b1 - b0 + 1:,} blocks)")
 
     print("Stage 1: fetching logs")
     fetch(b0, b1)
@@ -318,8 +318,8 @@ def main():
                          "detail": extra})
 
     rec = pd.DataFrame(rows)
-    rec.to_csv("data/aug_reconcile.csv.tmp", index=False)
-    os.replace("data/aug_reconcile.csv.tmp", "data/aug_reconcile.csv")
+    rec.to_csv(period.RECONCILE + ".tmp", index=False)
+    os.replace(period.RECONCILE + ".tmp", period.RECONCILE)
 
     if replaced:
         keep = ev[[(p, (b - b0) // WINDOW) not in replaced for p, b in zip(ev.pool, ev.block)]]
@@ -327,8 +327,8 @@ def main():
         ev["block"] = ev["block"].astype(int)
         ev["log_index"] = ev["log_index"].astype(int)
     ev = ev.sort_values(["block", "log_index"])
-    ev.to_csv("data/raw/aug_events.csv.gz.tmp", index=False, compression="gzip")
-    os.replace("data/raw/aug_events.csv.gz.tmp", "data/raw/aug_events.csv.gz")
+    ev.to_csv(period.EVENTS + ".tmp", index=False, compression="gzip")
+    os.replace(period.EVENTS + ".tmp", period.EVENTS)
 
     print(f"\nEvents: {len(ev):,} total")
     print(ev.groupby("event").size().to_string())

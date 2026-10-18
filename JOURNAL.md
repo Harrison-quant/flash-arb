@@ -706,3 +706,64 @@ profit removed. They select nothing and change no opportunity. If approved, they
 recomputed for August before September is looked at.
 
 - Variants tested: 1.
+
+## 2026-10-18 - Reporting correction: overlap-free totals and top-3-removed figures (before September)
+
+Approved by Harrison after the review of the 8 largest August opportunities, and recorded before any
+September data has been pulled. This is a reporting correction: no opportunity is found, sized or
+classified differently, and nothing is selected from the results. It applies to August (recomputed
+now) and September alike.
+
+**(a) Primary figure: largest opportunity per opening transaction.** One transaction that knocks a
+pool out of line opens every pair containing that pool at once, but the gap can only be taken once.
+So the headline totals and profit bins now keep, for each opening transaction, only the opportunity
+with the largest opening net profit. For the left-for-a-late-bot table: for each opening
+transaction, take the largest net profit at block open+N among its opportunities still open at that
+point. The old per-pair sums are still shown, labelled "all pool pairs (overlapping)".
+
+**(b) Reported alongside: top 3 events removed.** The same overlap-free totals and late-bot table,
+with the 3 opening transactions that have the largest overlap-free opening profit removed. This
+shows how much of the month comes from a handful of moments.
+
+**Express-lane note (August).** The 50.9% express-lane share of one-sided-swap profit is dominated
+by the two WBTC/WETH 0.3% liquidation events (blocks 496,292,234 and 496,292,236): those four rows are
+$2,440 of the $2,634 express-lane one-sided profit. Without them the share is about 7% ($194 of
+$2,734). The capture table itself is unchanged.
+
+**Possible future project, not explored here:** trading behind liquidations. Liquidators that route
+through thin pools leave large, short-lived dislocations, and in August an express-lane contract
+took both large ones. Recorded as an idea only. It isn't part of this study and won't be looked at
+in the September evaluation.
+
+## 2026-10-18 - August recomputed with the reporting correction
+
+Same opportunity rows as before; only the totals change (data/aug_scan_summary.txt).
+
+**Opening net profit, flash swap:**
+
+| Bin | Largest per opening tx (primary) | Primary, ex top 3 | All pool pairs (overlapping, old) |
+|---|---|---|---|
+| > $0 | 14,837, $3,274.11 | 14,834, $1,817.51 | 17,661, $6,012.51 |
+| > $0.10 | 1,495, $3,045.58 | 1,492, $1,588.98 | 2,249, $5,731.95 |
+| > $1 | 200, $2,707.57 | 197, $1,250.97 | 371, $5,234.34 |
+| > $10 | 26, $2,213.52 | 23, $756.92 | 53, $4,344.12 |
+| > $100 | 4, $1,614.08 | 1, $157.48 | 8, $3,058.99 |
+
+- Top 3 opening transactions: 0x51cdb53d... (block 496,292,236, $662.40) and 0x7ac980b5...
+  (496,292,234, $620.42), the two WBTC liquidations; and 0x652f60c6... (496,848,609, $173.77).
+- Median opening net (primary) $0.0108, p90 $0.10, p99 $1.38.
+
+**Left for a late bot (primary: largest net at open+N per opening transaction).** Ex top 3 is
+identical, because all three top events closed within one block.
+- N=1: 2,010 of 14,837 opening txs (13.5%), $539.73; 51 above $1, 10 above $10
+- N=2 (primary): 633 (4.3%), $352.09; 34 above $1, 6 above $10
+- N=4: 192 (1.3%), $253.36; 15 above $1, 6 above $10
+- N=8: 76 (0.5%), $183.39; 3 above $1, 3 above $10
+- Old overlapping figures for reference: N=2 672, $407.96.
+
+**Code for September.** Block range and paths now come from one setting, period.py
+(FLASH_ARB_PERIOD=sep). August outputs are unchanged by this: the recomputed August summary is
+identical line for line before and after the change. No other code changed. The design freeze
+otherwise stands.
+
+- Variants tested: 1.
