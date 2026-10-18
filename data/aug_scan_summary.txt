@@ -1,0 +1,78 @@
+Check 1: 12,804 of 12,804 pool-checkpoints match
+All checks passed.
+Aave premium (bps) over August: [5]
+Scan done: 14,197,262 states evaluated, 205,088 flagged by the screen, 17,661 opportunities
+17,661 opportunities, 15,299 distinct closing transactions
+
+=== SUMMARY (August 2026, primary = flash swap) ===
+States evaluated 14,197,262; flagged by screen 205,088; opportunities 17,661
+  opening net > $0: 17,661 opportunities, total opening net $6,012.51
+  opening net > $0.1: 2,249 opportunities, total opening net $5,731.95
+  opening net > $1: 371 opportunities, total opening net $5,234.34
+  opening net > $10: 53 opportunities, total opening net $4,344.12
+  opening net > $100: 8 opportunities, total opening net $3,058.99
+Opening net USD percentiles: {0.5: 0.0126, 0.9: 0.1317, 0.99: 2.4764, 1.0: 662.4046}
+Max net during run, total: $7004.30
+
+By pool pair (direction-agnostic):
+                                                            n     total  median
+pool_pair                                                                      
+WBTC/WETH UniswapV3 0.05% vs WBTC/WETH UniswapV3 0.3%      15  1283.766   0.040
+WBTC/WETH PancakeV3 0.01% vs WBTC/WETH UniswapV3 0.3%     392  1175.235   0.012
+WETH/USDC CamelotV3 0.01% vs WETH/USDC UniswapV3 0.05%   1171   787.009   0.033
+WETH/USDC CamelotV3 0.01% vs WETH/USDC PancakeV3 0.01%  10703   543.524   0.009
+WETH/USDC CamelotV3 0.01% vs WETH/USDC PancakeV3 0.05%   1508   435.678   0.013
+WETH/USDC PancakeV3 0.05% vs WETH/USDC UniswapV3 0.05%    195   427.459   0.158
+WBTC/WETH PancakeV3 0.01% vs WBTC/WETH UniswapV3 0.05%    965   357.728   0.035
+WETH/USDC CamelotV3 0.01% vs WETH/USDC UniswapV3 0.3%     153   300.118   0.048
+WETH/USDC PancakeV3 0.01% vs WETH/USDC UniswapV3 0.05%   1140   261.266   0.026
+WETH/USDC UniswapV3 0.05% vs WETH/USDC UniswapV3 0.3%      24   172.568   0.417
+WETH/USDC PancakeV3 0.01% vs WETH/USDC PancakeV3 0.05%   1100   130.805   0.017
+WETH/USDC PancakeV3 0.05% vs WETH/USDC UniswapV3 0.3%      25    59.951   0.164
+WETH/USDT UniswapV3 0.05% vs WETH/USDT UniswapV3 0.3%     102    46.958   0.016
+WETH/USDC PancakeV3 0.01% vs WETH/USDC UniswapV3 0.3%     168    30.451   0.024
+Universe-pool transactions between opening and closing: median 3.0 p90 21.0
+
+Duration (blocks from opening to closing): {'same block': 8479, '1': 6989, '2-4': 1995, '5-20': 175, '>20': 23, 'unclosed': 0}
+
+Who closed it:
+  atomic arbitrage  n=     363 (  2.1%)  opening profit $       83.12 (  1.4%)  express lane:   2.8% of count,   2.7% of profit
+  one-sided swap    n=  15,639 ( 88.6%)  opening profit $    5,174.05 ( 86.1%)  express lane:  12.2% of count,  50.9% of profit
+  other             n=   1,659 (  9.4%)  opening profit $      755.35 ( 12.6%)  express lane:  13.3% of count,   2.4% of profit
+
+Top closers by tx.to: profit share top1 47.6%, top3 61.2%, top10 85.8%; count share top1 18.2%, top3 42.5%, top10 79.3%
+                                            size      sum
+to                                                       
+0x93c30e6e09f698cfea99b09b5166ed90cfaedd17  2444  2862.35
+0xc174cfd48383e7041d0224b004192cbcca3eeb7b  1852   454.30
+0x09efd9e4578036a712e66fa999cf9ccaca664e0c   830   365.89
+0x8a1ba3d5b7864621a6214627a85a3f252b2e6180  1431   303.95
+0x9c35ad03327b24aba316cfcc8dc2a27ca3d70492    98   259.93
+0x96daa0b8a5499ea9323421ed0cda06b345caab73  1458   257.27
+0xeccc2d2cbd57819c41871de6633e1b6f5b1b182c    75   256.71
+0x1efb18be23bc417aa77c05af746f0c91fba3aa7d    12   152.00
+0xd416a3a15c8c44af24580cfeeec0bbd5880a2f2f   313   146.58
+0x636748740f74f0f3c1f303d43416dffa7c5b519d    89    99.22
+
+Top closers by tx.from: profit share top1 21.0%, top3 46.1%, top10 64.7%; count share top1 3.7%, top3 8.2%, top10 15.3%
+                                            size      sum
+from                                                     
+0x6edd4e997132b466ebfe7ddc58373148e36f020e    46  1264.64
+0x15b102f61d7681e1f6a2a55f2437a86b10f9a729    42  1183.57
+0x54503fa7b6329205e812f8bc870cca7f60470025    89   324.60
+0x711668093a7da9557adb76c59b6e27805fbe9c82    49   212.18
+0x570ed9818b3c54b7701384666266418736c98d8b    24   192.89
+0xf81cd4d814df1bfdaa15076f6dbf668cb944555b     7   169.00
+0xaaefb6d064fa0ddd373955ae60f042d4eb4fed0a    42   159.71
+0x5959881a9fd150c33b83fe7a8d1dfeb1c4371c7d     3   151.93
+0x30959c64619c43c72cdb384d34f23797277ebdcc     2   144.54
+0xe6d39b9aad9e0b98037b1d244cbe56311cf1b094    47    89.58
+
+Left for a late bot:
+  N=1: 2,193 still open (12.4%); net at that point total $641.46; > $1: 69; > $10: 12
+  N=2: 672 still open (3.8%); net at that point total $407.96; > $1: 43; > $10: 8
+  N=4: 198 still open (1.1%); net at that point total $293.16; > $1: 18; > $10: 8
+  N=8: 79 still open (0.4%); net at that point total $223.14; > $1: 4; > $10: 4
+
+Aave comparison: positive for 1,702 of 17,661; total $4,777.40 vs flash swap $6,012.51
+exit 0  

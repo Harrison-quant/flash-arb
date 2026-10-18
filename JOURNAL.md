@@ -552,3 +552,70 @@ This changes only how the swap maths is verified, not how opportunities are scre
 counted, so it's a correction and not a variant.
 
 - Variants tested: 0 so far. The main scan, when it runs, is variant 1.
+
+## 2026-10-18 - August scan results (variant 1, calibration only)
+
+Run: scan_august.py check aave scan capture, using the method in the entries "Opportunity scan:
+method", "plan approved with two changes" and "Check 2 revised". September is untouched. Full printed
+summary: data/aug_scan_summary.txt. Per-opportunity rows: data/raw/aug_opportunities.csv (not in git).
+
+**Checks.** Check 1: 12,804 of 12,804 pool-checkpoints match. Revised Check 2: 100.000% of swaps
+reproduced exactly in all 10 scanned pools. ARB/WETH is also 100%, and ARB/USDC is 99.777% (not
+gating). Aave premium: 5 bps at all 1,067 checkpoints.
+
+**Scale.** 14,197,262 pair-direction states evaluated (after every transaction touching a pool of a
+pair), 205,088 passed the fee screen, and 17,661 opportunities had net profit > 0 (flash swap, gas at
+350,000 units, L1 data fee excluded, so slightly overstated). Every opportunity closed within
+August.
+
+**Size (opening net profit, flash swap).**
+- > $0: 17,661, total $6,012.51
+- > $0.10: 2,249, total $5,731.95
+- > $1: 371, total $5,234.34
+- > $10: 53, total $4,344.12
+- > $100: 8, total $3,058.99
+- Median $0.0126, p90 $0.13, p99 $2.48, max $662.40. Summing the best state of each run instead of
+  the opening state gives $7,004.30.
+- Concentrated in time: all 8 opportunities above $100 come from three moments (around blocks
+  496,292,234, 496,848,609 and 499,997,853), each opening several pool pairs at once.
+- By pair: WETH/USDC 16,187 opportunities ($3,149), WBTC/WETH 1,372 ($2,817), WETH/USDT 102 ($47).
+  The thin WBTC/WETH Uniswap 0.3% pool against the two deep WBTC/WETH pools gave $2,459 of the
+  total from 407 opportunities. Camelot vs PancakeSwap 0.01% (WETH/USDC) is the most frequent pair
+  (10,703) but small (median $0.009).
+- Aave comparison: with a 5 bps loan, 1,702 of the 17,661 stay positive, total $4,777.40 against
+  $6,012.51 for the flash swap.
+
+**Duration.** 8,479 closed in the same block, 6,989 in the next block, 1,995 within 2-4 blocks, 175
+within 5-20, and 23 lasted more than 20. Universe-pool transactions between opening and closing:
+median 3, p90 21.
+
+**Who closed it.** All 15,299 closing transactions fetched, all status 1.
+- Atomic arbitrage (both legs of the pair, net gain): 363 (2.1%), $83 of opening profit (1.4%).
+  Express lane: 2.8% of count, 2.7% of profit.
+- One-sided swap (one pool of the pair): 15,639 (88.6%), $5,174 (86.1%). Express lane: 12.2% of
+  count, 50.9% of profit.
+- Other: 1,659 (9.4%), $755 (12.6%). Express lane: 13.3% of count, 2.4% of profit.
+- Reading: gaps between these pools are almost never closed by a two-pool atomic arbitrage. They are
+  closed by single-pool swaps. By profit, about half of those go through the express lane, which
+  fits bots trading these pools against other venues (centralised exchanges or other pools) rather
+  than against each other. Ordinary users can't be told apart from such bots with this data.
+- Concentration by tx.to: the top 1, 3 and 10 take 47.6%, 61.2% and 85.8% of opening profit. One
+  contract, 0x93c30e6e09f698cfea99b09b5166ed90cfaedd17, closed 2,444 opportunities worth $2,862. By
+  tx.from: 21.0%, 46.1% and 64.7%. No address labels looked up yet.
+
+**Left for a bot that's late (not in the express lane).** Still open after the last transaction of
+block open+N, profit counted at that point:
+- N=1: 2,193 (12.4%), $641.46 total; 69 above $1, 12 above $10
+- N=2 (primary): 672 (3.8%), $407.96 total; 43 above $1, 8 above $10
+- N=4: 198 (1.1%), $293.16 total; 18 above $1, 8 above $10
+- N=8: 79 (0.4%), $223.14 total; 4 above $1, 4 above $10
+- At N=2, 7 of the 8 opportunities above $10 come from the single moment at block 499,997,854.
+
+**Interpretation (provisional, calibration month).** About $6,000 of gross-of-L1-fee two-pool
+arbitrage appeared in August across 14 pool pairs, mostly in tiny amounts and closed within a block.
+At the primary late-bot assumption, about $408 was still there for the month, before the L1 data fee,
+failed-transaction gas, and competing with others for the same leftovers. More than half of that came
+from one volatile moment. This is consistent with the starting expectation that very little is left
+for a retail bot. Nothing has been tuned on these results.
+
+- Variants tested: 1.
