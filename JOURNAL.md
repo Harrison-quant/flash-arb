@@ -400,3 +400,49 @@ result. It applies to August 2026 (calibration) only. September stays untouched.
   repaid in the callback) needs no external loan and adds no fee beyond pool A's own, which is
   already in the maths. It is cheaper than Aave for large trades. Should financing include it? If
   added after the primary run, it counts as variant 2.
+
+## 2026-10-18 - Opportunity scan: plan approved with two changes (before running)
+
+Harrison approved the scan method in the entry above, with two changes. Both are recorded here
+before any code runs. They are part of the main run (variant 1), not extra variants.
+
+**Change 1: financing is a flash swap**
+- Primary: a flash swap on the buy-side pool. Pool A sends the output token first; in the swap
+  callback the bot sells it into pool B and pays pool A what it owes. Uniswap V3, PancakeSwap V3 and
+  Camelot V3 all support this through their swap callbacks. The only cost is pool A's own fee, which
+  is already inside the swap maths, so primary net profit = g(x*) - gas, with x* maximising g.
+- Comparison only: the same opportunity financed by an Aave V3 flash loan. That is g(x) - premium x -
+  gas, re-optimised over x, with the premium read on-chain (FLASHLOAN_PREMIUM_TOTAL, 5 bps at the
+  snapshot). Size is capped by Aave's available balance of the borrowed token. The premium and the
+  balances are read at every checkpoint, and the cap is the lower of the two checkpoints around the
+  block. This number is reported next to the primary one and doesn't define what counts as an
+  opportunity.
+- Balancer is dropped from the method: with a flash swap there's nothing to borrow.
+- Gas stays at 350,000 L2 gas units for both. A flash swap needs no separate loan call, so this is
+  if anything generous. It will be replaced by the phase-2 measurement.
+
+**Change 2: who captured it, three groups**
+- "Atomic arbitrage": the closing transaction swaps in both pools of the pair, in opposite
+  directions, and has a net gain. Net gain means the combined net ERC-20 flow to {tx.from, tx.to},
+  from the receipt's Transfer logs, is >= 0 in every token and > 0 in at least one.
+- "One-sided swap": the closing transaction swaps in exactly one of the pair's two pools. This could
+  be a bot arbitraging against a centralised exchange or another venue, or an ordinary user.
+- "Other": everything else (for example a Mint or Burn, a Camelot fee change, or both legs without a
+  net gain).
+- For each group: the count, the share of opportunities and of opening profit, and the express-lane
+  share (receipt.timeboosted), by count and by profit. The top capturing addresses (tx.to and
+  tx.from) are still reported, as in the plan.
+
+**Details fixed during setup (not changes to the method)**
+- Direction convention: for each pool pair there are two routes, depending on which pool has token0
+  cheaper (pool A). The bot pays token1 into A, receives token0, and sells it into B for token1.
+  So profit is in token1: USDC for WETH/USDC, USDT for WETH/USDT, WETH for WBTC/WETH.
+- USDT is converted to USD by the ratio of the WETH/USDC and WETH/USDT Uniswap V3 0.05% mid prices in
+  the same state, with USDC = $1.
+- Swap stepping follows each pool's tick-search rules exactly: Uniswap V3 and PancakeSwap V3 search
+  their tick bitmap one 256-tick word at a time, Camelot uses its tick table, and steps are clamped at
+  the minimum and maximum tick. Without this, rounding wouldn't match the pools. Each pool's tick
+  spacing is read on-chain. If Check 2 fails because my port is wrong (a bug, not a method choice),
+  I fix the port and rerun the checks, and record it.
+
+- Variants tested: 1 (this run) once it runs.
