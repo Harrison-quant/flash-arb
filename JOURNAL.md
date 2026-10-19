@@ -803,3 +803,152 @@ only, not all event blocks as in August. That's a description of the gas data, n
 result.
 
 - Variants tested: 1.
+
+## 2026-10-19 - September results: the one-time evaluation (variant 1)
+
+This is the evaluation run. September has now been looked at once, with the design frozen in the
+entry "The 8 August opportunities over $100, and design freeze", the reporting rules in "Reporting
+correction", and the gas-fetch order in "Implementation change" (identical results, verified on
+August). Nothing was changed after seeing these numbers. The evaluation period is now spent.
+Full printed summary: data/sep_scan_summary.txt. Per-opportunity rows: data/raw/sep_opportunities*.csv
+(not in git). The label "Aave premium (bps) over August" in the printout is a fixed string. The
+values are September's.
+
+**Checks.** Tick maps read at block 500,455,224, and active liquidity matches liquidity() in all 12
+pools. Check 1: 12,072 of 12,072 pool-checkpoints match. Revised Check 2: 100.000% exact in all 10
+scanned pools. ARB/WETH is also 100%, and ARB/USDC is 99.926% (not gating). Aave premium: 5 bps at
+all 1,006 checkpoints. Base fee fetched at the 104,755 screened blocks only: median 0.0200 gwei,
+max 0.458 gwei. Every opportunity closed within September.
+
+**Side by side (opening net profit, flash swap, gas at 350,000 units, L1 data fee excluded):**
+
+| | August (calibration) | September (evaluation) |
+|---|---|---|
+| States evaluated / passed screen | 14,197,262 / 205,088 | 14,269,418 / 200,448 |
+| Primary (largest per opening tx), > $0 | 14,837, $3,274.11 | 13,302, $35,317.82 |
+| Primary, > $0.10 | 1,495, $3,045.58 | 1,582, $35,121.45 |
+| Primary, > $1 | 200, $2,707.57 | 434, $34,775.20 |
+| Primary, > $10 | 26, $2,213.52 | 140, $33,860.97 |
+| Primary, > $100 | 4, $1,614.08 | 47, $30,879.08 |
+| Primary ex top 3, > $0 | 14,834, $1,817.51 | 13,299, $23,160.01 |
+| Primary ex top 3, > $1 | 197, $1,250.97 | 431, $22,617.39 |
+| Primary ex top 3, > $10 | 23, $756.92 | 137, $21,703.16 |
+| Primary ex top 3, > $100 | 1, $157.48 | 44, $18,721.27 |
+| All pool pairs (overlapping), > $0 | 17,661, $6,012.51 | 16,435, $64,626.23 |
+| Median / p90 / p99 (primary) | $0.0108 / $0.10 / $1.38 | $0.0109 / $0.13 / $11.01 |
+| Largest | $662.40 | $5,111.18 |
+| Aave 5 bps instead of flash swap (all pairs) | 1,702 positive, $4,777.40 | 2,421 positive, $60,360.58 |
+
+**Left for a late bot (primary: largest net at block open+N per opening transaction):**
+
+| N | August | September | September ex top 3 |
+|---|---|---|---|
+| 1 | 2,010, $539.73 | 1,520, $18,372.05 | 1,517, $9,259.83 |
+| 2 (primary) | 633, $352.09 | 566, $7,161.43 | 564, $6,060.38 |
+| 4 | 192, $253.36 | 202, $2,363.20 | 202, $2,363.20 |
+| 8 | 76, $183.39 | 89, $204.27 | 89, $204.27 |
+
+(August ex top 3 is the same as August primary.)
+
+**Duration (September):** 6,638 closed in the same block, 8,068 in the next block, 1,501 within 2-4,
+199 within 5-20, and 29 lasted more than 20 (August: 8,479 / 6,989 / 1,995 / 175 / 23).
+Universe-pool transactions between opening and closing: median 3, p90 20.
+
+**Who closed it (September).** All 14,058 closing transactions were fetched.
+- Atomic arbitrage: 497 (3.0%), $1,638 (2.5%). Express lane: 0.4% of count, 0.0% of profit.
+- One-sided swap: 13,873 (84.4%), $33,792 (52.3%). Express lane: 8.0% of count, 0.5% of profit.
+- Other: 2,065 (12.6%), $29,196 (45.2%). Express lane: 9.8% of count, 0.1% of profit.
+- Concentration by tx.to: the top 1, 3 and 10 take 21.5%, 51.2% and 86.2% of profit. By tx.from:
+  9.5%, 24.2% and 47.3%. Contract 0x93c3...dd17 is again the most frequent large closer (1,739
+  closes, $11,530).
+
+**Concentration in one window (descriptive, not a pre-registered cut).** On 24 September between
+19:17 and 21:02 UTC (blocks 508,535,000 to 508,560,000), the window holds 672 of 13,302 primary
+opportunities but $33,488 of the $35,318 primary total (94.8%), and 45 of the 47 above $100. At N=2
+it holds $7,114 of the $7,161. Outside this window, September's primary total is $1,829.44 (12,630
+opportunities, 2 above $100), and the late-bot figures are N=1 $114.65, N=2 $47.72, N=4 $21.50 and
+N=8 $0.19. The pre-registered ex top 3 rule removes only 3 of the window's events, so it doesn't
+show this.
+
+**The 10 largest opportunities, checked (correctness only, nothing changed).** All are WETH/USDC
+and all are inside that window. Buy pool -> sell pool. None of the closing transactions went
+through the express lane.
+
+| # | Open block | Buy -> sell | Net | Closing tx (block) | Closer (tx.to), group |
+|---|---|---|---|---|---|
+| 1 | 508,540,760 | Uni 0.3% -> Uni 0.05% | $5,111.18 | [0x91027d38...0335](https://arbiscan.io/tx/0x91027d3836917bc5c4fe6ad81c76183933c41ccf30a8a132e2152bce5b760335) (508,540,762) | 0x089c...4a87, other |
+| 2 | 508,540,895 | Uni 0.3% -> Uni 0.05% | $3,985.97 | [0x7a38a2fd...807a](https://arbiscan.io/tx/0x7a38a2fd4d1c4d6998d7c1d6ca23aa100d04ef4bc2e843330656372daf29807a) (508,540,897) | 0x089c...4a87, other |
+| 3 | 508,554,119 | Uni 0.05% -> Uni 0.3% | $3,060.66 | [0x38d49ec3...6d45](https://arbiscan.io/tx/0x38d49ec334edef561868bf81a0ee1242fcb869a563a249cad4db3165d4516d45) (508,554,122) | 0xd681...6aef, other |
+| 4 | 508,554,116 | Uni 0.05% -> Pancake 0.05% | $2,455.34 | [0x70991b44...dcde](https://arbiscan.io/tx/0x70991b44b1550e0a528e3dc733123580af12676eb579157b8806fca77137dcde) (508,554,119) | 0x93c3...dd17, one-sided |
+| 5 | 508,553,007 | Uni 0.05% -> Uni 0.3% | $1,970.83 | [0x54b3cd9b...1994](https://arbiscan.io/tx/0x54b3cd9b566c4134879e6fccb1a9119ed44855bbe734904ead9058fbf3191994) (508,553,011) | 0x0a13...da04, other |
+| 6 | 508,553,004 | Uni 0.3% -> Pancake 0.05% | $1,921.28 | [0x9f39d95d...a787](https://arbiscan.io/tx/0x9f39d95d8ac5d30b033f25f80e1268478a799214c434cbbb8125a02f6ceba787) (508,553,007) | 0x93c3...dd17, one-sided |
+| 7 | 508,554,116 | Uni 0.05% -> Camelot | $1,538.17 | [0xaf29d879...093a](https://arbiscan.io/tx/0xaf29d8795b5d22e8c28f078eb4e005e25284ba4cff20fe2f7cc3bfde7bd1093a) (508,554,116) | 0x1efb...a7d, other |
+| 8 | 508,553,004 | Uni 0.05% -> Pancake 0.05% | $1,479.18 | [0xd1594bb7...b437](https://arbiscan.io/tx/0xd1594bb733b7a0fdbbc2a2a8c0783142c8d44b60d4f16d3ca982e74a0711b437) (508,553,007) | 0x69bb...e4e3, atomic arbitrage |
+| 9 | 508,553,004 | Uni 0.3% -> Camelot | $1,341.33 | [0xae20957a...a604](https://arbiscan.io/tx/0xae20957a05b145b8f36e8ee843bad45af3885cee8d95762df7dad0efe53ba604) (508,553,005) | 0x6367...519d, one-sided |
+| 10 | 508,540,740 | Pancake 0.05% -> Uni 0.05% | $1,120.46 | [0xce3ce90f...f6ed](https://arbiscan.io/tx/0xce3ce90f2cd1721252a69d56149a8d4f18e21f7a4a0af2559d911570aa6af6ed) (508,540,741) | 0xd681...6aef, other |
+
+What opened the gaps (seven opening transactions):
+- Before and after the window, WETH/USDC on Arbitrum traded at about 2,670-2,700 USDC. Inside it,
+  three very large trades pushed the deep Uniswap 0.05% pool about 6% away and back within minutes.
+  They also moved the WETH/USDT 0.05% pool, so it was price impact on-chain, not a data error.
+- Block 508,540,740 (19:41:45 UTC, [0x0aa9c5b9...](https://arbiscan.io/tx/0x0aa9c5b95facdd5f3ef9711b0207e9a86a26aea6620e41862501c679d6dce8b7)):
+  a large WETH buy routed through several pools (contract 0x2d58...631a, with the 1inch router among
+  the log emitters). About 755 WETH came out of Uni 0.05% for 2.12M USDC, plus legs in Uni 0.3%,
+  WETH/USDT and WBTC/WETH. Uni 0.05% went to 2,870, against 2,757 on PancakeSwap 0.05% (#10).
+- Blocks 508,540,760 and 508,540,895 ([0x5abf2af6...](https://arbiscan.io/tx/0x5abf2af6e4a9fda16b42b5e1d4e9ecc66e7b1d8386f73b9345a71ac8997d6c79),
+  [0x818fd32e...](https://arbiscan.io/tx/0x818fd32e0adaec9186b9b45697982acd7a4735b05a757f4efa6f57c7c32a7a85)):
+  contract 0x93c3...dd17 sold 119.8 and then 142.6 WETH into Uni 0.3% only, pushing it to 2,739 and
+  2,702 while Uni 0.05% was still at 2,850 and 2,797 (#1, #2). This fits a bot trading that one pool
+  back towards an outside price, which leaves the 0.05% pool out of line with it.
+- Blocks 508,553,004 and 508,554,116 (20:32:38 and 20:37:14 UTC, [0xa1e7340f...](https://arbiscan.io/tx/0xa1e7340fafd5c99c236ccf560fef83ad4908b306cd4f7bb1a344bcea8602c42b),
+  [0x66e4bfe2...](https://arbiscan.io/tx/0x66e4bfe281c7e4cf3990c2f6f10b8ae4f6785ec7ae15e2a8c5873cd7af19f531)):
+  two large WETH sales by one sender (0x2bca...BeAE), through contract 0x2d01...Fe65 with the
+  Universal Router execute selector (0x3593564c). They used round amounts split over Uni 0.05%, Uni
+  0.3%, WETH/USDT and WBTC/WETH, about 1,998 WETH and 2,513 WETH in total. The largest leg was
+  1,633 WETH into Uni 0.05% for 4.27M USDC. Uni 0.05% fell to 2,570 and then 2,535, while
+  PancakeSwap 0.05% and Camelot stayed at about 2,686 (#4, #6, #7, #8, #9).
+- Blocks 508,553,007 and 508,554,119 ([0x9f39d95d...](https://arbiscan.io/tx/0x9f39d95d8ac5d30b033f25f80e1268478a799214c434cbbb8125a02f6ceba787),
+  [0xcfefc038...](https://arbiscan.io/tx/0xcfefc03807b2927830ed0c0abdefb0739914f5fee4160cd6e2f0ca0ca27d517c)):
+  0x93c3 again bought 90.1 and then 129.1 WETH from Uni 0.3% only, lifting it to 2,679 while Uni
+  0.05% was at 2,613 and 2,598 (#3, #5).
+
+Correctness checks on these 10:
+- Re-sizing from the replayed state right after each opening transaction gives the same trade size
+  as the file and the same net profit to the cent (gross minus gas of $0.02-0.07).
+- At the end of each opening block, the replayed state of both pools (sqrt price, tick, liquidity)
+  equals the archive state, in all 10 cases.
+- Independent maths check: for the 8 cases still open at the end of their opening block with no
+  Camelot leg, I re-sized the trade at that state and quoted both legs on-chain with the official
+  QuoterV2 contracts at that block (Uniswap 0x61fF...B21e, PancakeSwap 0xB048...5997). Both legs
+  equal the model's outputs exactly, to the last unit, in all 8. Those end-of-block profits were
+  $4,321, $3,973, $2,991, $1,476, $1,107, $677, $1,113 and $1,069. #7 closed inside its opening
+  block, and #9 has a Camelot leg.
+- A real trade matches the model: the closer of #1 put 274,313 USDC through Uni 0.3% and the WETH
+  into Uni 0.05%, against the model's optimal 274,270 USDC at the opening state. It kept 1.2953 WETH.
+- Units: profit is in USDC, so no price conversion is involved. Token transfers in the closing
+  transactions equal the swap amounts (no fee-on-transfer), and Check 2 reproduced every swap in
+  these pools exactly, including price-limited ones.
+- Conclusion: the large September opportunities are real on-chain dislocations, priced correctly.
+  None of them is an artefact.
+
+**Reading of the capture labels (description only, the table is unchanged).** The rule for "atomic
+arbitrage" needs a net token gain at tx.from or tx.to. The closers of #1, #2 and #3 do the whole
+two-pool trade in one transaction but send the profit to a third address (0x3050... and 0x0084...),
+so they are labelled "other". This is common. Of September's 2,065 "other" closes, 2,024 ($28,575
+of $29,196) swapped in both pools of the pair in opposite directions. In August it was 1,631 of
+1,659 ($751 of $755). So "atomic arbitrage" in both months' tables is a lower bound, and "other" is
+mostly two-pool arbitrage that pays out elsewhere. Express-lane use is small in September: about
+0.5% of profit, and none of the top 10.
+
+**Interpretation (evaluation month).** September's totals are about ten times August's, but that
+comes from one window of under two hours on 24 September. Three trades of $2-7M pushed the deepest
+Arbitrum WETH/USDC pool about 6% out of line, and the gaps were taken within 0-4 blocks, mostly by
+two-pool arbitrage contracts outside the express lane. For a bot that is two blocks late, September
+left $7,161 (primary), $7,114 of it in that window, and $48 in the rest of the month. That is before
+the L1 data fee, the gas of failed attempts and competition with other late bots for the same
+leftovers. So the finding from August holds outside rare large dislocations: almost nothing is left
+for a retail bot. Such events do leave $1,000-sized gaps open for a few blocks, but they are rare
+(one in each month, of very different size) and can't be predicted from this data.
+
+- Variants tested: 1.
+- Evaluation period (September 2026): spent, looked at once on 2026-10-19.

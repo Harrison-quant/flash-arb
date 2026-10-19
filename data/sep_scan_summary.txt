@@ -1,0 +1,110 @@
+Check 1: 12,072 of 12,072 pool-checkpoints match
+All checks passed.
+Aave premium (bps) over August: [5]
+Screen: 14,269,418 states, 200,448 passed, in 104,755 distinct blocks -> data/raw/sep/screen_blocks.csv
+Scan done: 14,269,418 states evaluated, 200,448 flagged by the screen, 16,435 opportunities
+16,435 opportunities, 14,058 distinct closing transactions
+=== SUMMARY (September 2026, primary = flash swap) ===
+States evaluated 14,269,418; flagged by screen 200,448; opportunities 16,435
+Top 3 opening transactions (removed in the 'ex top 3' lines):
+  0x5abf2af6e4a9fda16b42b5e1d4e9ecc66e7b1d8386f73b9345a71ac8997d6c79 block 508540760 $5,111.18
+  0x818fd32e0adaec9186b9b45697982acd7a4735b05a757f4efa6f57c7c32a7a85 block 508540895 $3,985.97
+  0xcfefc03807b2927830ed0c0abdefb0739914f5fee4160cd6e2f0ca0ca27d517c block 508554119 $3,060.66
+
+  [PRIMARY, largest per opening tx]
+  opening net > $0: 13,302 opportunities, total opening net $35,317.82
+  opening net > $0.1: 1,582 opportunities, total opening net $35,121.45
+  opening net > $1: 434 opportunities, total opening net $34,775.20
+  opening net > $10: 140 opportunities, total opening net $33,860.97
+  opening net > $100: 47 opportunities, total opening net $30,879.08
+
+  [largest per opening tx, ex top 3]
+  opening net > $0: 13,299 opportunities, total opening net $23,160.01
+  opening net > $0.1: 1,579 opportunities, total opening net $22,963.64
+  opening net > $1: 431 opportunities, total opening net $22,617.39
+  opening net > $10: 137 opportunities, total opening net $21,703.16
+  opening net > $100: 44 opportunities, total opening net $18,721.27
+
+  [all pool pairs (overlapping)]
+  opening net > $0: 16,435 opportunities, total opening net $64,626.23
+  opening net > $0.1: 2,991 opportunities, total opening net $64,384.28
+  opening net > $1: 897 opportunities, total opening net $63,687.39
+  opening net > $10: 304 opportunities, total opening net $61,912.78
+  opening net > $100: 99 opportunities, total opening net $54,907.79
+
+Opening net USD percentiles (largest per opening tx): {0.5: 0.0109, 0.9: 0.1326, 0.99: 11.0087, 1.0: 5111.1809}
+Opening net USD percentiles (all pool pairs): {0.5: 0.0142, 0.9: 0.3419, 0.99: 39.5687, 1.0: 5111.1809}
+Max net during run, total: $74327.03
+
+By pool pair (direction-agnostic):
+                                                            n      total  median
+pool_pair                                                                       
+WETH/USDC UniswapV3 0.05% vs WETH/USDC UniswapV3 0.3%      70  18470.044   2.537
+WETH/USDC CamelotV3 0.01% vs WETH/USDC UniswapV3 0.05%   1284   7576.794   0.061
+WETH/USDC PancakeV3 0.05% vs WETH/USDC UniswapV3 0.3%      47   7459.834   2.901
+WETH/USDC PancakeV3 0.05% vs WETH/USDC UniswapV3 0.05%    275   7044.696   0.491
+WETH/USDC CamelotV3 0.01% vs WETH/USDC UniswapV3 0.3%     236   6041.396   0.106
+WETH/USDC CamelotV3 0.01% vs WETH/USDC PancakeV3 0.05%   1040   3336.864   0.041
+WETH/USDC PancakeV3 0.01% vs WETH/USDC UniswapV3 0.05%    944   3213.138   0.036
+WETH/USDC PancakeV3 0.01% vs WETH/USDC UniswapV3 0.3%     203   2903.899   0.022
+WBTC/WETH PancakeV3 0.01% vs WBTC/WETH UniswapV3 0.05%    625   2314.557   0.055
+WETH/USDC CamelotV3 0.01% vs WETH/USDC PancakeV3 0.01%  10676   2313.162   0.008
+WETH/USDT UniswapV3 0.05% vs WETH/USDT UniswapV3 0.3%     122   1526.886   0.296
+WETH/USDC PancakeV3 0.01% vs WETH/USDC PancakeV3 0.05%    702   1464.109   0.029
+WBTC/WETH PancakeV3 0.01% vs WBTC/WETH UniswapV3 0.3%     192    608.200   0.021
+WBTC/WETH UniswapV3 0.05% vs WBTC/WETH UniswapV3 0.3%      19    352.652   2.980
+Universe-pool transactions between opening and closing: median 3.0 p90 20.0
+
+Duration (blocks from opening to closing): {'same block': 6638, '1': 8068, '2-4': 1501, '5-20': 199, '>20': 29, 'unclosed': 0}
+
+Who closed it:
+  atomic arbitrage  n=     497 (  3.0%)  opening profit $    1,638.14 (  2.5%)  express lane:   0.4% of count,   0.0% of profit
+  one-sided swap    n=  13,873 ( 84.4%)  opening profit $   33,792.46 ( 52.3%)  express lane:   8.0% of count,   0.5% of profit
+  other             n=   2,065 ( 12.6%)  opening profit $   29,195.63 ( 45.2%)  express lane:   9.8% of count,   0.1% of profit
+
+Top closers by tx.to: profit share top1 21.5%, top3 51.2%, top10 86.2%; count share top1 20.3%, top3 40.6%, top10 74.1%
+                                            size       sum
+to                                                        
+0x089c60aee18f33eb98e058c6eaf47b3bfded4a87    49  13865.49
+0x93c30e6e09f698cfea99b09b5166ed90cfaedd17  1739  11529.61
+0xd681e3bd131c438db2b321706f752ff956ca6aef   270   7722.85
+0x636748740f74f0f3c1f303d43416dffa7c5b519d   271   7359.53
+0x0a131cc276c5e5660addbd1155ce2eaa48a0da04    71   3870.04
+0x1efb18be23bc417aa77c05af746f0c91fba3aa7d   117   3297.53
+0xfb7c44a3026db28b0376cf9750ddd18c008a8149   266   2714.97
+0x000000007c6c837f570b998423ea0215b363e3a4   679   1961.14
+0x69bb29e2bf617bf74098d95054f72aee7999e4e3   174   1734.44
+0x8a1ba3d5b7864621a6214627a85a3f252b2e6180  3338   1639.56
+
+Top closers by tx.from: profit share top1 9.5%, top3 24.2%, top10 47.3%; count share top1 5.1%, top3 10.5%, top10 24.1%
+                                            size      sum
+from                                                     
+0x5d23d96b14857d9e49ce92441e78c16ee4521ea6     8  6155.34
+0x6fecf0cfd8bd7b2808a811a36ec30b61170d2cf5     4  5019.17
+0x115ce575a90f37c8a750f33d700e8a1ffb7b1e9f    19  4446.64
+0x92992d33b1273d6772cd1191091f92ad01734c61    25  2713.48
+0x15b102f61d7681e1f6a2a55f2437a86b10f9a729    28  2693.26
+0x526fe6134ee73e2e5281e4d3637788cb38253f0a     4  2360.00
+0x6fdb850fc09d04caf72f54cd8013cb55148f4a79     6  2123.47
+0xb70cfc151dfc97b9e1805d6ad27dce4df9351b6b    42  2070.01
+0xe843c09ab1d3ca29645f8dd5daa8630d52c5fd77    35  1515.36
+0xf27b3328a18139238ec49a0f2023c48bd365054f     8  1479.86
+
+Left for a late bot:
+  [PRIMARY, largest per opening tx]
+  N=1: 1,520 opening txs still open (11.4% of 13,302); net at that point total $18,372.05; > $1: 125; > $10: 64
+  N=2: 566 opening txs still open (4.3% of 13,302); net at that point total $7,161.43; > $1: 76; > $10: 43
+  N=4: 202 opening txs still open (1.5% of 13,302); net at that point total $2,363.20; > $1: 42; > $10: 23
+  N=8: 89 opening txs still open (0.7% of 13,302); net at that point total $204.27; > $1: 12; > $10: 8
+  [largest per opening tx, ex top 3]
+  N=1: 1,517 opening txs still open (11.4% of 13,302); net at that point total $9,259.83; > $1: 122; > $10: 61
+  N=2: 564 opening txs still open (4.2% of 13,302); net at that point total $6,060.38; > $1: 74; > $10: 42
+  N=4: 202 opening txs still open (1.5% of 13,302); net at that point total $2,363.20; > $1: 42; > $10: 23
+  N=8: 89 opening txs still open (0.7% of 13,302); net at that point total $204.27; > $1: 12; > $10: 8
+  [all pool pairs (overlapping)]
+  N=1: 1,729 still open (10.5%); net at that point total $25,625.33; > $1: 215; > $10: 115
+  N=2: 633 still open (3.9%); net at that point total $9,266.82; > $1: 115; > $10: 64
+  N=4: 228 still open (1.4%); net at that point total $3,357.21; > $1: 58; > $10: 35
+  N=8: 95 still open (0.6%); net at that point total $205.78; > $1: 12; > $10: 8
+
+Aave comparison: positive for 2,421 of 16,435; total $60,360.58 vs flash swap $64,626.23
