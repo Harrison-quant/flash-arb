@@ -58,9 +58,9 @@ Universe-pool transactions between opening and closing: median 3.0 p90 20.0
 Duration (blocks from opening to closing): {'same block': 6638, '1': 8068, '2-4': 1501, '5-20': 199, '>20': 29, 'unclosed': 0}
 
 Who closed it:
-  atomic arbitrage  n=     497 (  3.0%)  opening profit $    1,638.14 (  2.5%)  express lane:   0.4% of count,   0.0% of profit
-  one-sided swap    n=  13,873 ( 84.4%)  opening profit $   33,792.46 ( 52.3%)  express lane:   8.0% of count,   0.5% of profit
-  other             n=   2,065 ( 12.6%)  opening profit $   29,195.63 ( 45.2%)  express lane:   9.8% of count,   0.1% of profit
+  one-sided swap     n=  13,873 ( 84.4%)  opening profit $   33,792.46 ( 52.3%)  express lane:   8.0% of count,   0.5% of profit
+  other              n=      41 (  0.2%)  opening profit $      620.56 (  1.0%)  express lane:   0.0% of count,   0.0% of profit
+  two-pool arbitrage n=   2,521 ( 15.3%)  opening profit $   30,213.20 ( 46.8%)  express lane:   8.1% of count,   0.1% of profit
 
 Top closers by tx.to: profit share top1 21.5%, top3 51.2%, top10 86.2%; count share top1 20.3%, top3 40.6%, top10 74.1%
                                             size       sum

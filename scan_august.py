@@ -519,8 +519,11 @@ def classify(row):
         return "unclosed"
     a, b = row.close_swap_buy_pool, row.close_swap_sell_pool
     if pd.notna(a) and pd.notna(b):
-        if (a > 0) != (b > 0) and a != 0 and b != 0 and row.net_gain:
-            return "atomic arbitrage"
+        # Correction (journal 2026-10-20): swaps in both pools in opposite directions count as two-pool
+        # arbitrage whoever receives the profit. The old rule also required a net gain at tx.from/tx.to,
+        # which mislabelled arbitrage contracts that pay the profit to a third address.
+        if (a > 0) != (b > 0) and a != 0 and b != 0:
+            return "two-pool arbitrage"
         return "other"
     if pd.notna(a) or pd.notna(b):
         return "one-sided swap"
@@ -569,7 +572,7 @@ def summarise(opp, rc):
     tot_n, tot_p = len(opp), P.sum()
     for g, s in opp.groupby("group"):
         tb = s[s.timeboosted == True]  # noqa: E712
-        print(f"  {g:<17} n={len(s):>8,} ({len(s) / tot_n:6.1%})  opening profit ${s.open_net_usd.sum():>12,.2f} "
+        print(f"  {g:<18} n={len(s):>8,} ({len(s) / tot_n:6.1%})  opening profit ${s.open_net_usd.sum():>12,.2f} "
               f"({s.open_net_usd.sum() / tot_p:6.1%})  express lane: {len(tb) / max(len(s), 1):6.1%} of count, "
               f"{tb.open_net_usd.sum() / max(s.open_net_usd.sum(), 1e-12):6.1%} of profit")
     for col in ("to", "from"):

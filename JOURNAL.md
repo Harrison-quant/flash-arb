@@ -35,8 +35,19 @@ New entries go at the bottom; earlier entries aren't edited.
 ---
 
 ## Running totals
-- Variants tested: 0.
-- Evaluation period (Sep 2026): unspent.
+(Status section, updated in place. Last updated 2026-10-20.)
+- Variants tested: 1.
+- Evaluation period (Sep 2026): spent, looked at once on 2026-10-19.
+- Corrections and changes made (each in its own entry below):
+  1. 2026-10-18: Camelot tick-table indexing fixed in the maths port (bug found when switching to
+     archive tick reads).
+  2. 2026-10-18: Check 2 revised after it failed as written (approved by Harrison).
+  3. 2026-10-18: reporting correction, primary totals keep the largest opportunity per opening tx,
+     and top-3-removed figures are shown alongside (before September).
+  4. 2026-10-19: implementation change, base fee fetched only at blocks passing the fee screen
+     (identical results, verified on August), plus fixed row order in the opportunity file.
+  5. 2026-10-20: capture classification, any closing tx swapping in both pools in opposite
+     directions counts as two-pool arbitrage, whoever receives the profit (both months recomputed).
 
 ## 2026-10-17 - Setup and pool-list method (list not built yet)
 
@@ -952,3 +963,35 @@ for a retail bot. Such events do leave $1,000-sized gaps open for a few blocks, 
 
 - Variants tested: 1.
 - Evaluation period (September 2026): spent, looked at once on 2026-10-19.
+
+## 2026-10-20 - Correction: two-pool arbitrage label in the capture table (both months)
+
+The rule for "atomic arbitrage" was a classification bug, not a method choice (Harrison). It
+required swaps in both pools of the pair in opposite directions and a net token gain at tx.from or
+tx.to. Arbitrage contracts that pay their profit to a third address, which includes the closers of
+the three largest September opportunities, failed the second condition and were labelled "other".
+The corrected rule counts any closing transaction that swaps in both pools in opposite directions
+as two-pool arbitrage, whoever receives the profit. The group is now called "two-pool arbitrage".
+
+Only the capture table changes. Opportunities, profits, durations, closers, late-bot figures and the
+Aave comparison are identical: the summary files differ only in those three lines. No receipts were
+refetched.
+
+**Who closed it, corrected:**
+
+| Group | August | September |
+|---|---|---|
+| Two-pool arbitrage | 1,994 (11.3%), $833.96 (13.9%); express lane 11.5% of count, 2.4% of profit | 2,521 (15.3%), $30,213.20 (46.8%); express lane 8.1% of count, 0.1% of profit |
+| One-sided swap (unchanged) | 15,639 (88.6%), $5,174.05 (86.1%); express lane 12.2%, 50.9% | 13,873 (84.4%), $33,792.46 (52.3%); express lane 8.0%, 0.5% |
+| Other | 28 (0.2%), $4.51 (0.1%); express lane 3.6%, 0.1% | 41 (0.2%), $620.56 (1.0%); express lane 0.0%, 0.0% |
+
+The old figures were: atomic arbitrage 363, $83.12 (Aug) and 497, $1,638.14 (Sep); other 1,659,
+$755.35 and 2,065, $29,195.63. What remains in "other" is closes that swapped in both pools in the
+same direction (28 in August, 40 in September), plus one September close with no swap in either pool.
+
+**Reading.** In September, two-pool arbitrage closed about half the opening profit, and almost all
+of the 24 September window's large gaps. In August, single-pool swaps dominate. The August
+express-lane share of one-sided profit (50.9%) is still the two WBTC liquidation backruns. In
+neither month does the express lane take a meaningful share of two-pool arbitrage profit.
+
+- Variants tested: 1.
