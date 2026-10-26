@@ -29,7 +29,7 @@ never edited after the fact.
   transaction, so it needs no capital. A failed attempt still costs gas.
 - **Timeboost / express lane:** Arbitrum auctions an "express lane" every minute. The winner's
   transactions go through immediately; everyone else's are held back about 200 milliseconds. A 2026
-  study found three entities win almost all auctions. My starting hypothesis was that the express-lane
+  [study](https://arxiv.org/abs/2509.22143) found three entities win almost all auctions. My starting hypothesis was that the express-lane
   holders take almost all arbitrage and a bot without it is always too late.
 
 ## Setup and pre-commitments
@@ -64,7 +64,7 @@ The results are only as good as the replay of the pools, so this was checked har
 - **Completeness:** every event of the 12 pools was pulled, and the rebuilt state was compared with
   the chain's own recorded state every 10,000 blocks. 12,792 of 12,792 checks matched exactly in
   August, and 12,060 of 12,060 in September.
-- **Swap maths:** every real swap in each month (2.5 million in August) was replayed through my model
+- **Swap maths:** every real swap in each month (2.5 million in August) was replayed through the model
   of the pools. Every swap in the scanned pools was reproduced exactly: same amounts in and out, same
   final price, to the last unit.
 - **Spot checks:** the ten largest September opportunities were re-priced with the exchanges' own
@@ -152,7 +152,7 @@ large closer in both.
 
 Each is a separate journal entry, written when it happened.
 
-1. **Camelot tick-indexing bug (18 Oct).** My model of Camelot pools indexed its price table the wrong
+1. **Camelot tick-indexing bug (18 Oct).** The model of Camelot pools indexed its price table the wrong
    way. Found and fixed before any check ran.
 2. **Faster tick-map source (18 Oct).** Rebuilding pool history from scratch would have taken days, so
    starting pool states were read directly from an archive node instead. Verified identical on the
