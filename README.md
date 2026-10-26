@@ -89,7 +89,7 @@ opportunity per triggering transaction.
 | Median opportunity | $0.011 | $0.011 |
 | Opportunities over $100 | 4 | 47 |
 | Largest single opportunity | $662 | $5,111 |
-| Closed in the same or next block | 87% | 89% |
+| Closed in the same or next block | 88% | 89% |
 | **Left for a bot 2 blocks late** | **633, $352** | **566, $7,161** |
 | Left for a bot 1 / 4 / 8 blocks late | $540 / $253 / $183 | $18,372 / $2,363 / $204 |
 
@@ -118,8 +118,8 @@ large closer in both.
 - **The express lane barely mattered.** I expected express-lane holders to take nearly everything.
   In September, express-lane transactions closed about 0.5% of the profit or less in every group, and
   none of the ten largest opportunities. In August, half of the single-pool profit went through the
-  express lane, but that is two events (below); without them it is about 7%. The competition that
-  matters here is speed among ordinary bots, not the auction.
+  express lane, but that is two events (below); without them it is about 7%. Whatever decided who won
+  these gaps, in these two months it was mostly not the auction.
 - **Profit is concentrated in rare shocks.** The median opportunity is about one cent in both months.
   August's largest came from two loan liquidations routed through a thin WBTC/WETH pool, which moved
   it 6% for a moment. September's came from one two-hour window. These events are real and leave
