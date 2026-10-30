@@ -35,7 +35,8 @@ New entries go at the bottom; earlier entries aren't edited.
 ---
 
 ## Running totals
-(Status section, updated in place. Last updated 2026-10-20.)
+(Status section, updated in place. Last updated 2026-10-30.)
+- Project status: closed after phase 1 (measurement), 2026-10-30. Phases 2-4 not run.
 - Variants tested: 1.
 - Evaluation period (Sep 2026): spent, looked at once on 2026-10-19.
 - Corrections and changes made (each in its own entry below):
@@ -995,3 +996,27 @@ express-lane share of one-sided profit (50.9%) is still the two WBTC liquidation
 neither month does the express lane take a meaningful share of two-pool arbitrage profit.
 
 - Variants tested: 1.
+
+## 2026-10-30 - Decision: the project ends at phase 1
+
+I've decided not to run this with real money, so phases 2-4 (contract on a local fork, shadow mode,
+live test) will not be done. The study ends at measurement.
+
+**Reason.** Outside rare, unpredictable shocks, the expected value of a retail bot is close to
+zero. A bot two blocks late would have found $352 in August and $48 in September outside the
+24 September window, before the L1 data fee, the gas of failed attempts and competition with other
+late bots for the same leftovers. All three of those would push the figure down, not up. The money
+that does exist sits in one shock per month (two WBTC liquidations in August, one two-hour window in
+September), of very different size, and nothing in the data says when the next one comes. The
+remaining phases would refine the cost side of an answer that is already clear, and a live test
+would put money at risk to confirm it.
+
+**What this leaves unmeasured.** The real L2 gas units and the L1 data fee per transaction were
+never measured, so the phase 1 figures stay overstated by an unknown amount, as stated in the
+README. No correction entry recomputing them will follow.
+
+**Possible extensions, not planned:** the contract replay at historical blocks, a shock-only live
+bot that trades only during large dislocations, and the same measurement on Base.
+
+- Variants tested: 1.
+- Evaluation period (September 2026): spent, looked at once on 2026-10-19.

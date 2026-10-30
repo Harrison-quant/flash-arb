@@ -9,8 +9,9 @@ fraction of a second late.
 would have found a few hundred dollars in total, before costs I could not yet measure. Almost all the
 real money appears in one or two short, unpredictable events per month.
 
-Status: phase 1 (measurement) is complete. Phase 2 (a real contract replayed on a local copy of the
-chain) is next.
+Status: the study is complete and ends at measurement. I decided not to build or run a bot with
+real money: outside rare, unpredictable shocks the expected value is close to zero (see the
+[closing journal entry](JOURNAL.md)).
 
 ## How this was built
 
@@ -133,8 +134,8 @@ large closer in both.
 ## Limitations
 
 - **L1 data fee not counted.** Every Arbitrum transaction also pays to post its data to Ethereum.
-  That is not in the block data I used, so all profit figures are too high. Phase 2 measures it.
-- **Gas is an estimate.** 350,000 gas units per trade, to be replaced by the real figure from phase 2.
+  That is not in the block data I used, so all profit figures are too high. It was never measured.
+- **Gas is an estimate.** 350,000 gas units per trade; the real figure was never measured.
   At August's typical gas price this cost about a cent, so it matters for small opportunities only.
 - **Failed attempts not counted.** A real bot pays gas on every attempt that arrives too late and
   reverts. With most gaps gone within a block, that could be most attempts.
@@ -170,14 +171,14 @@ Each is a separate journal entry, written when it happened.
    profit to a third address were wrongly labelled "other". Fixing this moved two-pool arbitrage
    from 2.5% to 46.8% of September's profit. Only the "who took it" table changed.
 
-## What's next
+## Possible extensions (not planned)
 
-- **Phase 2:** a real arbitrage contract on a local copy of the chain, replaying historical
-  opportunities at their original blocks, to measure real gas and the L1 fee and check the phase 1
-  numbers.
-- **Phase 3:** a live listener that records what it would have done, without trading.
-- **Phase 4:** a tiny live test, only if phase 3 is net positive after the cost of failed attempts.
-- Later: the same measurement on Base, which has no express lane.
+- **Contract replay:** a real arbitrage contract on a local copy of the chain, replaying historical
+  opportunities at their original blocks, to measure real gas and the L1 fee and check the
+  measured numbers.
+- **A shock-only live bot:** a bot that stays idle and trades only during large dislocations like
+  the two found here, where gaps stay open for a few blocks.
+- **Base comparison:** the same measurement on Base, which has no express lane.
 
 ## Files
 

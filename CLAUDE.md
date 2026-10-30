@@ -8,10 +8,12 @@ The research question: **how much DEX arbitrage is actually available to a retai
 and who captures it?** The bot is the measuring tool. We expect it to be unprofitable; an honest
 "nothing is left for us, and here is why" is a valid result.
 
-## Status (2026-10-26)
-- **Phase 1 (measure) is complete.** August calibrated, design frozen, September evaluated once on
-  2026-10-19. The evaluation period is spent. Variants tested: 1.
-- **Next up: phase 2** (contract on a local fork). Nothing for phase 2 has been written yet.
+## Status (2026-10-30)
+- **The study is complete and ends at phase 1 (measurement).** August calibrated, design frozen,
+  September evaluated once on 2026-10-19. The evaluation period is spent. Variants tested: 1.
+- **Closed 2026-10-30:** Harrison decided not to run this with real money, so phases 2-4 will not be
+  done. Reason: expected value close to zero outside rare, unpredictable shocks (journal entry
+  2026-10-30). No further work is planned.
 - JOURNAL.md has the full record; README.md is the public summary. If the two disagree, the journal
   wins and the README is fixed.
 
@@ -78,24 +80,17 @@ and who captures it?** The bot is the measuring tool. We expect it to be unprofi
 6. Capture label: any closing tx swapping in both pools in opposite directions counts as two-pool
    arbitrage, whoever receives the profit (both months recomputed, 2026-10-20).
 
-## Open limitations to carry into phase 2
-- L1 data fee not counted; 350,000 gas units is an estimate. Phase 2 measures both.
+## Open limitations (final, not resolved)
+- L1 data fee not counted; 350,000 gas units is an estimate. Neither was measured.
 - Gas of failed attempts and competition among late bots for the same leftovers not modelled.
 - Only two months, each dominated by one rare event.
 
-## Phase 2 plan (next)
-- Solidity + Foundry, local Arbitrum fork from the archive RPC (key in .env).
-- Contract: flash swap on pool A, sell into pool B in the callback, repay, revert unless profit
-  clears a threshold. Supports Uniswap V3, PancakeSwap V3 and Camelot V3 callbacks.
-- Replay real phase-1 opportunities at their historical blocks (the top cases from both months plus a
-  fixed random sample, chosen and written in the journal before running). Compare fork profit with
-  the phase-1 model.
-- Measure real L2 gas units and the L1 data fee per transaction, then recompute the phase-1 net
-  figures with them as a correction entry (not a new variant).
-- Write the plan into JOURNAL.md and get Harrison's approval before writing the contract.
-
-## Later
-- Phase 3 shadow mode, phase 4 tiny live test only if shadow mode is net positive after failed-attempt
-  gas.
-- Planned follow-up: same measurement on Base (journal entry 2026-10-17), after Arbitrum is written up.
-- Idea only, not part of this study: trading behind liquidations routed through thin pools.
+## Possible extensions (not planned)
+Only if Harrison reopens the project; any of these would start with a plan in the journal.
+- Contract replay: Solidity + Foundry contract (flash swap on pool A, sell into pool B in the
+  callback, revert unless profitable) replaying phase-1 opportunities on a local Arbitrum fork, to
+  measure real L2 gas and the L1 data fee and recompute the phase-1 net figures as a correction.
+- A shock-only live bot that trades only during large dislocations (fresh wallet, a few dollars,
+  Harrison's approval before anything is signed or sent).
+- The same measurement on Base (journal entry 2026-10-17).
+- Idea only: trading behind liquidations routed through thin pools.
